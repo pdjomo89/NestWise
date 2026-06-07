@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useQuery } from 'convex/react';
+import { useQuery, Authenticated, Unauthenticated, AuthLoading } from 'convex/react';
 import { api } from '../convex/_generated/api';
 import Dashboard from './components/Dashboard';
 import Transactions from './components/Transactions';
@@ -8,6 +8,7 @@ import Advice from './components/Advice';
 import Budget from './components/Budget';
 import Accounts from './components/Accounts';
 import Settings from './components/Settings';
+import SignIn from './components/SignIn';
 import { useLang } from './prefs';
 
 type Tab =
@@ -19,7 +20,27 @@ type Tab =
   | 'advice'
   | 'settings';
 
+// Auth gate: show a splash while resolving, the sign-in page when signed out,
+// and the full app only when authenticated.
 export default function App() {
+  return (
+    <>
+      <AuthLoading>
+        <div className="auth-screen">
+          <p className="muted">Loading…</p>
+        </div>
+      </AuthLoading>
+      <Unauthenticated>
+        <SignIn />
+      </Unauthenticated>
+      <Authenticated>
+        <AppContent />
+      </Authenticated>
+    </>
+  );
+}
+
+function AppContent() {
   // When Plaid redirects back from an OAuth bank login, the app reloads at the
   // root with an `oauth_state_id` query param. Start on the Accounts tab so
   // ConnectBank mounts and resumes the Link flow.

@@ -1,6 +1,7 @@
 import { query } from './_generated/server';
 import { v } from 'convex/values';
 import { toMonthly } from './frequency';
+import { getUserId } from './auth';
 
 const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 
@@ -9,12 +10,41 @@ const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 export const get = query({
   args: { lang: v.optional(v.union(v.literal('en'), v.literal('fr'))) },
   handler: async (ctx, { lang = 'en' }) => {
-    const people = await ctx.db.query('people').collect();
-    const sources = await ctx.db.query('incomeSources').collect();
-    const recurring = await ctx.db.query('recurringExpenses').collect();
-    const txns = await ctx.db.query('transactions').collect();
-
     const month = new Date(Date.now()).toISOString().slice(0, 7); // YYYY-MM
+
+    const userId = await getUserId(ctx);
+    if (!userId) {
+      return {
+        month,
+        monthlyIncome: 0,
+        perPerson: [] as { personId: string | null; name: string; monthly: number }[],
+        recurringMonthly: 0,
+        oneOffThisMonth: 0,
+        monthlyExpenses: 0,
+        surplus: 0,
+        savingsRate: 0,
+        byCategory: [] as { category: string; total: number }[],
+        status: 'setup',
+        tips: buildTips('setup', { surplus: 0, savingsRate: 0, monthlyIncome: 0, monthlyExpenses: 0 }, lang),
+      };
+    }
+
+    const people = await ctx.db
+      .query('people')
+      .withIndex('by_user', (q) => q.eq('userId', userId))
+      .collect();
+    const sources = await ctx.db
+      .query('incomeSources')
+      .withIndex('by_user', (q) => q.eq('userId', userId))
+      .collect();
+    const recurring = await ctx.db
+      .query('recurringExpenses')
+      .withIndex('by_user', (q) => q.eq('userId', userId))
+      .collect();
+    const txns = await ctx.db
+      .query('transactions')
+      .withIndex('by_user', (q) => q.eq('userId', userId))
+      .collect();
 
     // Income, total and per person.
     const perPersonMonthly = new Map<string, number>();

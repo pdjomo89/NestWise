@@ -9,8 +9,11 @@
  */
 
 import type * as accounts from "../accounts.js";
+import type * as auth from "../auth.js";
 import type * as budget from "../budget.js";
+import type * as cleanup from "../cleanup.js";
 import type * as frequency from "../frequency.js";
+import type * as http from "../http.js";
 import type * as income from "../income.js";
 import type * as people from "../people.js";
 import type * as plaid from "../plaid.js";
@@ -21,6 +24,7 @@ import type * as retirement from "../retirement.js";
 import type * as seed from "../seed.js";
 import type * as summary from "../summary.js";
 import type * as transactions from "../transactions.js";
+import type * as users from "../users.js";
 
 import type {
   ApiFromModules,
@@ -30,8 +34,11 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   accounts: typeof accounts;
+  auth: typeof auth;
   budget: typeof budget;
+  cleanup: typeof cleanup;
   frequency: typeof frequency;
+  http: typeof http;
   income: typeof income;
   people: typeof people;
   plaid: typeof plaid;
@@ -42,6 +49,7 @@ declare const fullApi: ApiFromModules<{
   seed: typeof seed;
   summary: typeof summary;
   transactions: typeof transactions;
+  users: typeof users;
 }>;
 
 /**

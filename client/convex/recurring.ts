@@ -1,5 +1,6 @@
 import { query, mutation } from './_generated/server';
 import { v } from 'convex/values';
+import { getUserId, requireUserId, getOwned } from './auth';
 
 const frequency = v.union(
   v.literal('weekly'),
@@ -12,7 +13,12 @@ const frequency = v.union(
 export const list = query({
   args: {},
   handler: async (ctx) => {
-    const items = await ctx.db.query('recurringExpenses').collect();
+    const userId = await getUserId(ctx);
+    if (!userId) return [];
+    const items = await ctx.db
+      .query('recurringExpenses')
+      .withIndex('by_user', (q) => q.eq('userId', userId))
+      .collect();
     return items.sort((a, b) => a._creationTime - b._creationTime);
   },
 });
@@ -24,8 +30,16 @@ export const add = mutation({
     amount: v.number(),
     frequency,
   },
-  handler: async (ctx, args) =>
-    ctx.db.insert('recurringExpenses', { ...args, category: args.category ?? 'general' }),
+  handler: async (ctx, args) => {
+    const userId = await requireUserId(ctx);
+    return ctx.db.insert('recurringExpenses', {
+      userId,
+      label: args.label,
+      category: args.category ?? 'general',
+      amount: args.amount,
+      frequency: args.frequency,
+    });
+  },
 });
 
 export const update = mutation({
@@ -37,6 +51,7 @@ export const update = mutation({
     frequency,
   },
   handler: async (ctx, { id, label, category, amount, frequency }) => {
+    await getOwned(ctx, id);
     await ctx.db.patch(id, { label, category, amount, frequency });
   },
 });
@@ -44,6 +59,7 @@ export const update = mutation({
 export const remove = mutation({
   args: { id: v.id('recurringExpenses') },
   handler: async (ctx, { id }) => {
+    await getOwned(ctx, id);
     await ctx.db.delete(id);
   },
 });

@@ -1,6 +1,7 @@
 import { action, internalAction, internalMutation, internalQuery, query } from './_generated/server';
 import { internal } from './_generated/api';
 import { v } from 'convex/values';
+import { getUserId, requireUserId } from './auth';
 
 // The Convex runtime exposes env vars via process.env. The project has no
 // @types/node (Convex functions don't run on Node), so declare just this.
@@ -98,25 +99,25 @@ function mapAccountTypeAndBalance(plaidType: string, subtype: string | null, cur
 }
 
 // ---------------------------------------------------------------------------
-// Public actions (called from the browser).
+// Public actions (called from the browser). All require a signed-in user so
+// every connection and imported row is owned by that user.
 // ---------------------------------------------------------------------------
 
 // Create a Link token used to open Plaid Link in the browser.
 //
 // `redirectUri` is the app URL Plaid sends the browser back to after an OAuth
 // bank login (most major US banks). It must EXACTLY match an "Allowed redirect
-// URI" registered in the Plaid dashboard. We only attach it outside sandbox:
-// sandbox's standard institutions don't use OAuth, so omitting it keeps the
-// sandbox flow working with no dashboard setup, while production/Trial gets
-// OAuth support automatically.
+// URI" registered in the Plaid dashboard. We only attach it outside sandbox.
 export const createLinkToken = action({
   args: { redirectUri: v.optional(v.string()) },
-  handler: async (_ctx, { redirectUri }) => {
+  handler: async (ctx, { redirectUri }) => {
+    const userId = await requireUserId(ctx);
     const { env } = plaidConfig();
     const useOAuthRedirect = redirectUri && env !== 'sandbox';
     const res = await plaidFetch('/link/token/create', {
       client_name: 'NestWise',
-      user: { client_user_id: 'nestwise-local-user' },
+      // Scope Plaid's user to our user so re-links map to the same Plaid user.
+      user: { client_user_id: userId },
       products: ['transactions'],
       country_codes: ['US'],
       language: 'en',
@@ -127,52 +128,64 @@ export const createLinkToken = action({
 });
 
 // Exchange the public token from Link for a permanent access token, store the
-// connection, then immediately pull accounts + transactions.
+// connection for this user, then immediately pull accounts + transactions.
 export const exchangePublicToken = action({
   args: { publicToken: v.string(), institutionName: v.optional(v.string()) },
   handler: async (ctx, { publicToken, institutionName }): Promise<SyncResult> => {
+    const userId = await requireUserId(ctx);
     const res = await plaidFetch('/item/public_token/exchange', {
       public_token: publicToken,
     });
     await ctx.runMutation(internal.plaid.storeItem, {
+      userId,
       itemId: res.item_id,
       accessToken: res.access_token,
       institutionName,
     });
-    return await ctx.runAction(internal.plaid.syncCore, {});
+    return await ctx.runAction(internal.plaid.syncCore, { userId });
   },
 });
 
-// Re-pull accounts + transactions for every connected bank ("Sync now" button).
+// Re-pull accounts + transactions for this user's connected banks ("Sync now").
 export const sync = action({
   args: {},
   handler: async (ctx): Promise<SyncResult> => {
-    return await ctx.runAction(internal.plaid.syncCore, {});
+    const userId = await requireUserId(ctx);
+    return await ctx.runAction(internal.plaid.syncCore, { userId });
   },
 });
 
-// Remove a connection at Plaid and locally (keeps already-imported rows).
+// Remove one of this user's connections at Plaid and locally (keeps imported rows).
 export const disconnect = action({
   args: { itemId: v.string() },
   handler: async (ctx, { itemId }) => {
-    const item = await ctx.runQuery(internal.plaid.getItemByItemId, { itemId });
+    const userId = await requireUserId(ctx);
+    const item = await ctx.runQuery(internal.plaid.getItemByItemId, { userId, itemId });
     if (!item) return { removed: false };
     try {
       await plaidFetch('/item/remove', { access_token: item.accessToken });
     } catch {
       // If Plaid removal fails (e.g. already gone), still drop it locally.
     }
-    await ctx.runMutation(internal.plaid.deleteItem, { itemId });
+    await ctx.runMutation(internal.plaid.deleteItem, { userId, itemId });
     return { removed: true };
   },
 });
 
-// Lightweight, token-free view of connections for the UI.
+// Lightweight, token-free view of THIS user's connections for the UI.
 export const listConnections = query({
   args: {},
   handler: async (ctx) => {
-    const items = await ctx.db.query('plaidItems').collect();
-    const accounts = await ctx.db.query('accounts').collect();
+    const userId = await getUserId(ctx);
+    if (!userId) return [];
+    const items = await ctx.db
+      .query('plaidItems')
+      .withIndex('by_user', (q) => q.eq('userId', userId))
+      .collect();
+    const accounts = await ctx.db
+      .query('accounts')
+      .withIndex('by_user', (q) => q.eq('userId', userId))
+      .collect();
     return items.map((i) => ({
       itemId: i.itemId,
       institutionName: i.institutionName ?? 'Bank',
@@ -184,12 +197,13 @@ export const listConnections = query({
 
 // ---------------------------------------------------------------------------
 // Internal action: the actual fetch-and-store loop, shared by exchange + sync.
+// Scoped to one user (passed in from the public actions, which authenticated).
 // ---------------------------------------------------------------------------
 
 export const syncCore = internalAction({
-  args: {},
-  handler: async (ctx): Promise<SyncResult> => {
-    const items = await ctx.runQuery(internal.plaid.getItems);
+  args: { userId: v.id('users') },
+  handler: async (ctx, { userId }): Promise<SyncResult> => {
+    const items = await ctx.runQuery(internal.plaid.getItems, { userId });
     let imported = 0;
     let removedCount = 0;
     for (const item of items) {
@@ -239,6 +253,7 @@ export const syncCore = internalAction({
       });
 
       const result = await ctx.runMutation(internal.plaid.applySync, {
+        userId,
         plaidItemId: item.itemId,
         accounts,
         added: added.map(mapTxn),
@@ -254,20 +269,25 @@ export const syncCore = internalAction({
 });
 
 // ---------------------------------------------------------------------------
-// Internal queries / mutations (db access for the actions above).
+// Internal queries / mutations (db access for the actions above). All scoped
+// to the userId passed in by the authenticated public action.
 // ---------------------------------------------------------------------------
 
 export const getItems = internalQuery({
-  args: {},
-  handler: async (ctx) => ctx.db.query('plaidItems').collect(),
+  args: { userId: v.id('users') },
+  handler: async (ctx, { userId }) =>
+    ctx.db
+      .query('plaidItems')
+      .withIndex('by_user', (q) => q.eq('userId', userId))
+      .collect(),
 });
 
 export const getItemByItemId = internalQuery({
-  args: { itemId: v.string() },
-  handler: async (ctx, { itemId }) => {
+  args: { userId: v.id('users'), itemId: v.string() },
+  handler: async (ctx, { userId, itemId }) => {
     const rows = await ctx.db
       .query('plaidItems')
-      .withIndex('by_item', (q) => q.eq('itemId', itemId))
+      .withIndex('by_item', (q) => q.eq('userId', userId).eq('itemId', itemId))
       .take(1);
     return rows[0] ?? null;
   },
@@ -275,6 +295,7 @@ export const getItemByItemId = internalQuery({
 
 export const storeItem = internalMutation({
   args: {
+    userId: v.id('users'),
     itemId: v.string(),
     accessToken: v.string(),
     institutionName: v.optional(v.string()),
@@ -282,7 +303,7 @@ export const storeItem = internalMutation({
   handler: async (ctx, args) => {
     const existing = await ctx.db
       .query('plaidItems')
-      .withIndex('by_item', (q) => q.eq('itemId', args.itemId))
+      .withIndex('by_item', (q) => q.eq('userId', args.userId).eq('itemId', args.itemId))
       .take(1);
     if (existing[0]) {
       await ctx.db.patch(existing[0]._id, {
@@ -296,11 +317,11 @@ export const storeItem = internalMutation({
 });
 
 export const deleteItem = internalMutation({
-  args: { itemId: v.string() },
-  handler: async (ctx, { itemId }) => {
+  args: { userId: v.id('users'), itemId: v.string() },
+  handler: async (ctx, { userId, itemId }) => {
     const rows = await ctx.db
       .query('plaidItems')
-      .withIndex('by_item', (q) => q.eq('itemId', itemId))
+      .withIndex('by_item', (q) => q.eq('userId', userId).eq('itemId', itemId))
       .take(1);
     if (rows[0]) await ctx.db.delete(rows[0]._id);
   },
@@ -322,10 +343,11 @@ const txnArg = v.object({
   date: v.string(),
 });
 
-// Apply one sync's worth of accounts + transactions atomically, keeping rows
-// idempotent via the plaidAccountId / plaidTransactionId keys.
+// Apply one sync's worth of accounts + transactions atomically for one user,
+// keeping rows idempotent via the (userId, plaidAccountId/plaidTransactionId) keys.
 export const applySync = internalMutation({
   args: {
+    userId: v.id('users'),
     plaidItemId: v.string(),
     accounts: v.array(acctArg),
     added: v.array(txnArg),
@@ -335,14 +357,16 @@ export const applySync = internalMutation({
   },
   handler: async (
     ctx,
-    { plaidItemId, accounts, added, modified, removed, cursor }
+    { userId, plaidItemId, accounts, added, modified, removed, cursor }
   ): Promise<{ upserted: number; removed: number }> => {
     // Upsert accounts and build a plaidAccountId -> Convex _id map.
     const idByPlaid = new Map<string, any>();
     for (const a of accounts) {
       const existing = await ctx.db
         .query('accounts')
-        .withIndex('by_plaid_account', (q) => q.eq('plaidAccountId', a.plaidAccountId))
+        .withIndex('by_plaid_account', (q) =>
+          q.eq('userId', userId).eq('plaidAccountId', a.plaidAccountId)
+        )
         .take(1);
       if (existing[0]) {
         await ctx.db.patch(existing[0]._id, {
@@ -354,6 +378,7 @@ export const applySync = internalMutation({
         idByPlaid.set(a.plaidAccountId, existing[0]._id);
       } else {
         const id = await ctx.db.insert('accounts', {
+          userId,
           name: a.name,
           type: a.type,
           balance: a.balance,
@@ -369,7 +394,9 @@ export const applySync = internalMutation({
       const accountId = idByPlaid.get(t.plaidAccountId);
       const existing = await ctx.db
         .query('transactions')
-        .withIndex('by_plaid_txn', (q) => q.eq('plaidTransactionId', t.plaidTransactionId))
+        .withIndex('by_plaid_txn', (q) =>
+          q.eq('userId', userId).eq('plaidTransactionId', t.plaidTransactionId)
+        )
         .take(1);
       const fields = {
         accountId,
@@ -380,7 +407,7 @@ export const applySync = internalMutation({
         plaidTransactionId: t.plaidTransactionId,
       };
       if (existing[0]) await ctx.db.patch(existing[0]._id, fields);
-      else await ctx.db.insert('transactions', fields);
+      else await ctx.db.insert('transactions', { userId, ...fields });
       upserted++;
     }
 
@@ -388,7 +415,9 @@ export const applySync = internalMutation({
     for (const txnId of removed) {
       const existing = await ctx.db
         .query('transactions')
-        .withIndex('by_plaid_txn', (q) => q.eq('plaidTransactionId', txnId))
+        .withIndex('by_plaid_txn', (q) =>
+          q.eq('userId', userId).eq('plaidTransactionId', txnId)
+        )
         .take(1);
       if (existing[0]) {
         await ctx.db.delete(existing[0]._id);
@@ -399,7 +428,7 @@ export const applySync = internalMutation({
     // Save the cursor so the next sync only fetches new changes.
     const item = await ctx.db
       .query('plaidItems')
-      .withIndex('by_item', (q) => q.eq('itemId', plaidItemId))
+      .withIndex('by_item', (q) => q.eq('userId', userId).eq('itemId', plaidItemId))
       .take(1);
     if (item[0]) await ctx.db.patch(item[0]._id, { cursor });
 

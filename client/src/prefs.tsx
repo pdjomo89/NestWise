@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { useQuery, useMutation } from 'convex/react';
+import { useQuery, useMutation, useConvexAuth } from 'convex/react';
 import { api } from '../convex/_generated/api';
 import { setLocale, setCurrency } from './format';
 
@@ -217,9 +217,14 @@ export function PrefsProvider({ children }: { children: ReactNode }) {
     () => localStorage.getItem('nw-currency') || 'USD'
   );
 
-  // Convex is the durable, cross-device store.
+  // Convex is the durable, cross-device store — but only for signed-in users.
+  // Signed out (on the sign-in page) we stay on localStorage only.
+  const { isAuthenticated } = useConvexAuth();
   const serverPrefs = useQuery(api.preferences.get);
   const savePrefs = useMutation(api.preferences.set);
+  const persist = (p: { theme: Theme; lang: Lang; currency: Currency }) => {
+    if (isAuthenticated) void savePrefs(p);
+  };
 
   // Keep the formatter's locale + currency in sync, synchronously.
   setLocale(lang === 'fr' ? 'fr-FR' : 'en-US');
@@ -239,31 +244,32 @@ export function PrefsProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('nw-currency', currency);
   }, [currency]);
 
-  // On load: adopt server prefs (e.g. changed on another device); if none exist
-  // yet, migrate the current local prefs up to the server.
+  // On load (once signed in): adopt server prefs (e.g. changed on another
+  // device); if none exist yet, migrate the current local prefs up to the server.
   useEffect(() => {
+    if (!isAuthenticated) return; // signed out → localStorage only
     if (serverPrefs === undefined) return; // still loading
     if (serverPrefs === null) {
-      savePrefs({ theme, lang, currency });
+      persist({ theme, lang, currency });
     } else {
       setThemeState(serverPrefs.theme);
       setLangState(serverPrefs.lang);
       if (serverPrefs.currency) setCurrencyState(serverPrefs.currency);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [serverPrefs]);
+  }, [serverPrefs, isAuthenticated]);
 
   const applyTheme = (th: Theme) => {
     setThemeState(th);
-    savePrefs({ theme: th, lang, currency });
+    persist({ theme: th, lang, currency });
   };
   const applyLang = (l: Lang) => {
     setLangState(l);
-    savePrefs({ theme, lang: l, currency });
+    persist({ theme, lang: l, currency });
   };
   const applyCurrency = (c: Currency) => {
     setCurrencyState(c);
-    savePrefs({ theme, lang, currency: c });
+    persist({ theme, lang, currency: c });
   };
 
   const t = (s: string) => (lang === 'fr' ? FR[s] ?? s : s);

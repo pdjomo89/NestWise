@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { useMutation } from 'convex/react';
+import { useMutation, useQuery } from 'convex/react';
+import { useAuthActions } from '@convex-dev/auth/react';
 import { api } from '../../convex/_generated/api';
 import { useCurrency, useLang, useTheme, CURRENCIES } from '../prefs';
 
@@ -7,6 +8,8 @@ export default function Settings() {
   const { t, lang, setLang } = useLang();
   const { theme, setTheme } = useTheme();
   const { currency, setCurrency } = useCurrency();
+  const { signOut } = useAuthActions();
+  const user = useQuery(api.users.current);
   const resetToSample = useMutation(api.seed.resetToSample);
   const [confirming, setConfirming] = useState(false);
   const [done, setDone] = useState(false);
@@ -111,6 +114,18 @@ export default function Settings() {
             ? t('Done — sample data restored.')
             : t('Replace everything with the original demo dataset. Your settings are kept.')}
         </p>
+      </section>
+
+      <section className="panel settings">
+        <h2>{t('Account')}</h2>
+        <div className="settings-row">
+          <span className="settings-label">
+            {user?.email ? user.email : t('Signed in')}
+          </span>
+          <button className="toggle-btn" onClick={() => void signOut()}>
+            {t('Sign out')}
+          </button>
+        </div>
       </section>
     </div>
   );
