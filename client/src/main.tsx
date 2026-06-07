@@ -11,12 +11,14 @@ import './index.css';
 // works through remote port-forwarding (e.g. Codespaces) with no extra setup.
 //
 // In a production build there is no Vite proxy, so we connect directly to the
-// Convex Cloud deployment URL injected at build time as VITE_CONVEX_URL. On
-// Vercel, set the build command to `npx convex deploy --cmd 'npm run build'`,
-// which deploys the backend and sets this variable automatically.
+// Convex Cloud deployment. The backend is deployed separately (not from the
+// web host), so we bake the production URL in here; it's a public value (it
+// ships in the client bundle either way). VITE_CONVEX_URL can still override
+// it at build time if set.
+const PROD_CONVEX_URL = 'https://outgoing-spaniel-316.convex.cloud';
 const convex = new ConvexReactClient(
   import.meta.env.PROD
-    ? (import.meta.env.VITE_CONVEX_URL as string)
+    ? (import.meta.env.VITE_CONVEX_URL ?? PROD_CONVEX_URL)
     : window.location.origin
 );
 
