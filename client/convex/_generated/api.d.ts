@@ -11,7 +11,6 @@
 import type * as accounts from "../accounts.js";
 import type * as auth from "../auth.js";
 import type * as budget from "../budget.js";
-import type * as cleanup from "../cleanup.js";
 import type * as frequency from "../frequency.js";
 import type * as http from "../http.js";
 import type * as income from "../income.js";
@@ -36,7 +35,6 @@ declare const fullApi: ApiFromModules<{
   accounts: typeof accounts;
   auth: typeof auth;
   budget: typeof budget;
-  cleanup: typeof cleanup;
   frequency: typeof frequency;
   http: typeof http;
   income: typeof income;
