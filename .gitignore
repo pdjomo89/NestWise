@@ -1,0 +1,11 @@
+node_modules/
+dist/
+*.log
+
+# Convex local deployment state + secrets
+.convex/
+client/.env.local
+
+# Editor / OS
+.DS_Store
+.vscode/
