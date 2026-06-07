@@ -15,9 +15,9 @@
 
 /* Light theme: flip surfaces and darken the brand colors for contrast. */
 :root[data-theme='light'] {
-  --bg: #f4f6fb;
-  --panel: #ffffff;
-  --panel-2: #eef2f7;
+  --bg: #e6ddc9;
+  --panel: #fbf7ef;
+  --panel-2: #f0e8d8;
   --text: #0f172a;
   --muted: #64748b;
   --border: #e2e8f0;
@@ -83,7 +83,7 @@ body {
   border-radius: 12px;
   width: fit-content;
   max-width: 100%;
-  margin: 0 0 20px;
+  margin: 0 auto 20px;
 }
 .tab {
   border: 0;
@@ -225,6 +225,9 @@ body {
 .panel h2 {
   margin: 0 0 16px;
   font-size: 16px;
+  padding-left: 11px;
+  border-left: 3px solid var(--brand-gold);
+  line-height: 1.15;
 }
 
 .muted { color: var(--muted); }
