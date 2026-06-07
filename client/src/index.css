@@ -16,8 +16,8 @@
 /* Light theme: flip surfaces and darken the brand colors for contrast. */
 :root[data-theme='light'] {
   --bg: #e6ddc9;
-  --panel: #fbf7ef;
-  --panel-2: #f0e8d8;
+  --panel: #f1ead8;
+  --panel-2: #e7decb;
   --text: #0f172a;
   --muted: #64748b;
   --border: #e2e8f0;
