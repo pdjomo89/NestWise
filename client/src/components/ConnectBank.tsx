@@ -193,11 +193,6 @@ export default function ConnectBank() {
           ))}
         </ul>
       )}
-
-      <p className="muted small" style={{ marginTop: 12 }}>
-        {t('Sandbox testing: use')} <code>user_good</code> / <code>pass_good</code>{' '}
-        {t('at any bank in the Plaid pop-up.')}
-      </p>
     </section>
   );
 }
