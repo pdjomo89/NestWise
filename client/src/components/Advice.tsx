@@ -3,6 +3,8 @@ import { useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { Account, Summary, Budget } from '../types';
 import { usd } from '../format';
+import { isInvestmentType } from '../accountTypes';
+import { capitalize } from '../categories';
 import { useLang } from '../prefs';
 
 // Monthly income/expenses are pre-filled from the household budget (Budget tab),
@@ -25,12 +27,54 @@ export default function Advice({
   const creditCardDebt = accounts
     .filter((a) => a.type === 'credit' && a.balance < 0)
     .reduce((s, a) => s - a.balance, 0);
+  const cashReserves = accounts
+    .filter((a) => a.type === 'checking' || a.type === 'savings')
+    .reduce((s, a) => s + a.balance, 0);
+  const investmentValue = accounts
+    .filter((a) => isInvestmentType(a.type))
+    .reduce((s, a) => s + a.balance, 0);
+  const retirementValue = accounts
+    .filter((a) => a.type === 'retirement')
+    .reduce((s, a) => s + a.balance, 0);
+
+  // Biggest expense category (excluding income), with a translated label.
+  const topCat = budget.byCategory
+    .filter((c) => c.category !== 'income')
+    .reduce<{ category: string; total: number } | null>(
+      (m, c) => (c.total > (m?.total ?? -Infinity) ? c : m),
+      null
+    );
+  const topCategory = topCat
+    ? { label: t(capitalize(topCat.category)), total: topCat.total }
+    : undefined;
+
+  // Live retirement projection (same math as the dashboard outlook) so advice
+  // can tell whether they're on track.
+  const plan = useQuery(api.retirement.getPlan);
+  const projection = useQuery(
+    api.planning.projectRetirement,
+    plan
+      ? {
+          currentAge: plan.currentAge,
+          retirementAge: plan.retirementAge,
+          currentSavings: plan.currentSavings ?? summary.netWorth,
+          monthlyContribution: plan.monthlyContribution ?? Math.max(0, budget.surplus),
+          annualReturn: plan.annualReturn,
+          annualInflation: plan.annualInflation,
+        }
+      : 'skip'
+  );
 
   const advice = useQuery(api.planning.savingsAdvice, {
     monthlyIncome,
     monthlyExpenses,
     currentSavings,
     creditCardDebt,
+    cashReserves,
+    investmentValue,
+    retirementValue,
+    retirementSustainableIncome: projection?.sustainableMonthlyIncome,
+    topCategory,
     lang,
   });
 

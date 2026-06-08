@@ -61,18 +61,37 @@ export const projectRetirement = query({
   },
 });
 
-// Rule-of-thumb savings advice from a monthly cash-flow.
+// Whole-picture financial advice from a monthly cash-flow plus optional balance
+// and retirement signals. Every applicable area produces a detailed, prioritized
+// tip with concrete numbers. Extra signals are optional so the query stays
+// callable with just the core cash-flow fields.
 export const savingsAdvice = query({
   args: {
     monthlyIncome: v.number(),
     monthlyExpenses: v.number(),
     currentSavings: v.number(),
     creditCardDebt: v.optional(v.number()), // total owed across credit cards (positive)
+    cashReserves: v.optional(v.number()), // liquid cash (checking + savings)
+    investmentValue: v.optional(v.number()), // current value of investment accounts
+    retirementValue: v.optional(v.number()), // balance in retirement accounts
+    retirementSustainableIncome: v.optional(v.number()), // projected 4%-rule monthly income
+    topCategory: v.optional(v.object({ label: v.string(), total: v.number() })), // biggest expense
     lang: v.optional(v.union(v.literal('en'), v.literal('fr'))),
   },
   handler: async (
     _ctx,
-    { monthlyIncome, monthlyExpenses, currentSavings, creditCardDebt = 0, lang = 'en' }
+    {
+      monthlyIncome,
+      monthlyExpenses,
+      currentSavings,
+      creditCardDebt = 0,
+      cashReserves,
+      investmentValue,
+      retirementValue,
+      retirementSustainableIncome,
+      topCategory,
+      lang = 'en',
+    }
   ) => {
     const fr = lang === 'fr';
     const tips: { level: string; title: string; detail: string }[] = [];
@@ -149,6 +168,83 @@ export const savingsAdvice = query({
               : 'Direct extra surplus toward retirement and investments.',
           }
     );
+
+    // Retirement trajectory — uses the live projection passed from the client.
+    const retirementTarget = round2(monthlyExpenses * 0.8); // ~80% income replacement
+    if (retirementSustainableIncome != null && monthlyExpenses > 0) {
+      if (retirementSustainableIncome < retirementTarget) {
+        tips.push({
+          level: 'info',
+          title: fr ? 'Vous êtes en retard sur la retraite' : "You're behind on retirement",
+          detail: fr
+            ? `Votre épargne actuelle projette environ ${fmt(retirementSustainableIncome)}/mois à la retraite, sous les ~${fmt(retirementTarget)}/mois nécessaires pour maintenir votre niveau de vie. Augmentez vos cotisations (visez 15 % du revenu) et captez d’abord tout match employeur. Ajustez le plan dans l’onglet Retraite.`
+            : `Your current savings project to about ${fmt(retirementSustainableIncome)}/mo in retirement — below the ~${fmt(retirementTarget)}/mo needed to keep your lifestyle. Raise your monthly contributions (aim for 15% of income) and capture any employer match first. Tune the plan in the Retirement tab.`,
+        });
+      } else {
+        tips.push({
+          level: 'good',
+          title: fr ? 'Votre retraite est sur la bonne voie' : 'Your retirement is on track',
+          detail: fr
+            ? `Vos placements projettent environ ${fmt(retirementSustainableIncome)}/mois, de quoi couvrir vos ~${fmt(monthlyExpenses)}/mois de dépenses. Continuez à cotiser et révisez le plan chaque année.`
+            : `Your investments project to about ${fmt(retirementSustainableIncome)}/mo — enough to cover your ~${fmt(monthlyExpenses)}/mo of expenses. Keep contributing and review the plan each year.`,
+        });
+      }
+    } else if ((retirementValue ?? 0) === 0) {
+      tips.push({
+        level: 'info',
+        title: fr ? 'Commencez à épargner pour la retraite' : 'Start saving for retirement',
+        detail: fr
+          ? 'Vous n’avez pas encore de compte retraite. Ouvrez un 401(k) ou un IRA et captez d’abord tout match employeur — c’est un rendement immédiat de 100 %. Configurez votre plan dans l’onglet Retraite.'
+          : "You have no retirement account yet. Open a 401(k) or IRA and capture any employer match first — that's an instant 100% return. Set up your plan in the Retirement tab.",
+      });
+    }
+
+    // Idle cash sitting well above a healthy emergency buffer.
+    if (cashReserves != null && monthlyExpenses > 0) {
+      const excess = round2(cashReserves - emergencyTarget);
+      if (excess > monthlyExpenses) {
+        const annualYield = round2(excess * 0.04);
+        tips.push({
+          level: 'info',
+          title: fr ? 'Faites travailler votre encaisse' : 'Put your idle cash to work',
+          detail: fr
+            ? `Vous détenez ${fmt(cashReserves)} en liquide, soit environ ${fmt(excess)} de plus qu’un fonds d’urgence de 6 mois. Placez l’excédent dans un compte d’épargne à haut rendement (~4 %) ou des placements : cela rapporterait environ ${fmt(annualYield)}/an au lieu de dormir.`
+            : `You hold ${fmt(cashReserves)} in cash — about ${fmt(excess)} more than a 6-month emergency fund. Move the excess into a high-yield savings account (~4%) or investments to earn roughly ${fmt(annualYield)}/yr instead of letting it sit idle.`,
+        });
+      }
+    }
+
+    // Surplus with an emergency fund in place but nothing invested yet.
+    if (
+      surplus > 0 &&
+      currentSavings >= emergencyTarget * 0.8 &&
+      (investmentValue ?? 0) === 0 &&
+      creditCardDebt === 0
+    ) {
+      const fv = round2(surplus * 520); // ~$/mo for 20 yrs at 7% (monthly compounding)
+      tips.push({
+        level: 'info',
+        title: fr ? 'Investissez votre excédent mensuel' : 'Invest your monthly surplus',
+        detail: fr
+          ? `Vous dégagez ${fmt(surplus)}/mois mais n’avez aucun placement. Une fois le fonds d’urgence constitué, investissez l’excédent dans des fonds indiciels à faibles frais : à ce rythme sur 20 ans (~7 %/an), cela pourrait dépasser ${fmt(fv)}.`
+          : `You're freeing up ${fmt(surplus)}/mo but hold no investments. With your emergency fund in place, invest the surplus in low-cost index funds — at this rate for 20 years (~7%/yr) it could grow to over ${fmt(fv)}.`,
+      });
+    }
+
+    // Largest expense category dominating the budget.
+    if (topCategory && monthlyExpenses > 0 && topCategory.total > monthlyExpenses * 0.3) {
+      const share = Math.round((topCategory.total / monthlyExpenses) * 100);
+      const trim = round2(topCategory.total * 0.1);
+      tips.push({
+        level: 'info',
+        title: fr
+          ? `${topCategory.label} pèse lourd dans votre budget`
+          : `${topCategory.label} is a big share of your budget`,
+        detail: fr
+          ? `${topCategory.label} représente ${fmt(topCategory.total)}/mois, soit ${share} % de vos dépenses. La réduire de 10 % libérerait environ ${fmt(trim)}/mois pour la dette ou l’épargne.`
+          : `${topCategory.label} is ${fmt(topCategory.total)}/mo — ${share}% of your spending. Trimming it 10% would free about ${fmt(trim)}/mo toward debt or savings.`,
+      });
+    }
 
     if (creditCardDebt > 0) {
       tips.push({
