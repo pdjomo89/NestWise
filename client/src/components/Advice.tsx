@@ -1,22 +1,36 @@
 import { useState } from 'react';
 import { useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
-import { Summary, Budget } from '../types';
+import { Account, Summary, Budget } from '../types';
 import { usd } from '../format';
 import { useLang } from '../prefs';
 
 // Monthly income/expenses are pre-filled from the household budget (Budget tab),
 // current savings from net worth. Tweaking any field re-computes advice live.
-export default function Advice({ summary, budget }: { summary: Summary; budget: Budget }) {
+export default function Advice({
+  summary,
+  budget,
+  accounts,
+}: {
+  summary: Summary;
+  budget: Budget;
+  accounts: Account[];
+}) {
   const { t, lang } = useLang();
   const [monthlyIncome, setMonthlyIncome] = useState(Math.round(budget.monthlyIncome));
   const [monthlyExpenses, setMonthlyExpenses] = useState(Math.round(budget.monthlyExpenses));
   const [currentSavings, setCurrentSavings] = useState(Math.round(summary.netWorth));
 
+  // Credit cards store a negative balance; sum their magnitude as money owed.
+  const creditCardDebt = accounts
+    .filter((a) => a.type === 'credit' && a.balance < 0)
+    .reduce((s, a) => s - a.balance, 0);
+
   const advice = useQuery(api.planning.savingsAdvice, {
     monthlyIncome,
     monthlyExpenses,
     currentSavings,
+    creditCardDebt,
     lang,
   });
 
@@ -70,6 +84,9 @@ export default function Advice({ summary, budget }: { summary: Summary; budget: 
               value={usd(advice.emergencyTarget)}
               accent="gold"
             />
+            {creditCardDebt > 0 && (
+              <Stat label={t('Credit card debt')} value={usd(creditCardDebt)} accent="red" />
+            )}
           </section>
 
           <section className="panel">

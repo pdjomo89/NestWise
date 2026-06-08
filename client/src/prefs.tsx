@@ -88,6 +88,8 @@ const FR: Record<string, string> = {
   'Add account': 'Ajouter un compte',
   'Name (e.g. Fidelity)': 'Nom (ex. Fidelity)',
   'Current value': 'Valeur actuelle',
+  'Amount owed': 'Montant dû',
+  'Credit card debt': 'Dette de carte de crédit',
   'Total contributed': 'Total contribué',
   'Your accounts': 'Vos comptes',
   'All balances count toward net worth. Add a “total contributed” to an investment to track its gain.':
@@ -119,6 +121,7 @@ const FR: Record<string, string> = {
   General: 'Général',
   // Account type labels (Savings reuses the category entry above)
   Checking: 'Compte courant',
+  'Credit card': 'Carte de crédit',
   'Retirement (401k/IRA)': 'Retraite (401k/IRA)',
   'Brokerage / Stocks': 'Courtage / Actions',
   Crypto: 'Crypto',

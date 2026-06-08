@@ -67,9 +67,13 @@ export const savingsAdvice = query({
     monthlyIncome: v.number(),
     monthlyExpenses: v.number(),
     currentSavings: v.number(),
+    creditCardDebt: v.optional(v.number()), // total owed across credit cards (positive)
     lang: v.optional(v.union(v.literal('en'), v.literal('fr'))),
   },
-  handler: async (_ctx, { monthlyIncome, monthlyExpenses, currentSavings, lang = 'en' }) => {
+  handler: async (
+    _ctx,
+    { monthlyIncome, monthlyExpenses, currentSavings, creditCardDebt = 0, lang = 'en' }
+  ) => {
     const fr = lang === 'fr';
     const tips: { level: string; title: string; detail: string }[] = [];
     const surplus = round2(monthlyIncome - monthlyExpenses);
@@ -79,6 +83,30 @@ export const savingsAdvice = query({
       return fr ? `${en.replace(/,/g, ' ').replace('.', ',')} $` : `$${en}`;
     };
     const pct = `${(savingsRate * 100).toFixed(0)}${fr ? ' %' : '%'}`;
+
+    // Highest-priority guidance: paying off high-interest credit card debt
+    // beats almost any investment return, so it leads the list.
+    if (creditCardDebt > 0) {
+      const monthsToPayoff = surplus > 0 ? Math.ceil(creditCardDebt / surplus) : null;
+      const timeline = monthsToPayoff
+        ? fr
+          ? ` À ${fmt(surplus)}/mois d’excédent, vous seriez libéré en environ ${monthsToPayoff} mois.`
+          : ` At ${fmt(surplus)}/mo surplus, you'd be debt-free in about ${monthsToPayoff} months.`
+        : fr
+        ? ' Dégagez d’abord un excédent mensuel pour commencer à le rembourser.'
+        : ' Free up a monthly surplus first so you can start paying it down.';
+      tips.push({
+        level: 'urgent',
+        title: fr
+          ? `Remboursez ${fmt(creditCardDebt)} de dette de carte de crédit`
+          : `Pay off ${fmt(creditCardDebt)} in credit card debt`,
+        detail:
+          (fr
+            ? 'Les cartes de crédit facturent souvent 20–25 % d’intérêt — bien plus que ce que rapportent les placements. Remboursez d’abord la carte au taux le plus élevé (méthode avalanche).'
+            : 'Credit cards often charge 20–25% interest — far more than investments earn. Pay the highest-rate card first (the avalanche method).') +
+          timeline,
+      });
+    }
 
     if (surplus <= 0) {
       tips.push({
@@ -122,6 +150,16 @@ export const savingsAdvice = query({
           }
     );
 
-    return { surplus, savingsRate: round2(savingsRate), emergencyTarget, tips };
+    if (creditCardDebt > 0) {
+      tips.push({
+        level: 'info',
+        title: fr ? 'Gardez l’utilisation sous 30 %' : 'Keep card utilization under 30%',
+        detail: fr
+          ? 'Évitez de nouveaux achats à crédit et réglez le solde complet chaque mois pour protéger votre cote de crédit et éviter les intérêts.'
+          : 'Avoid new charges and pay the full statement balance each month to protect your credit score and avoid interest.',
+      });
+    }
+
+    return { surplus, savingsRate: round2(savingsRate), emergencyTarget, creditCardDebt, tips };
   },
 });

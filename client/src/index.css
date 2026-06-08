@@ -262,6 +262,7 @@ body {
 }
 .pill.checking { background: #1e3a8a; color: #bfdbfe; }
 .pill.savings { background: #14532d; color: #bbf7d0; }
+.pill.credit { background: #7f1d1d; color: #fecaca; }
 .pill.retirement { background: #4c1d95; color: #ddd6fe; }
 .pill.brokerage { background: #134e4a; color: #99f6e4; }
 .pill.iul { background: #7c2d12; color: #fed7aa; }

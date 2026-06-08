@@ -3,7 +3,7 @@ import { useMutation } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { Account, Id } from '../types';
 import { usd } from '../format';
-import { ACCOUNT_TYPES, ACCOUNT_TYPE_LABEL, isInvestmentType } from '../accountTypes';
+import { ACCOUNT_TYPES, ACCOUNT_TYPE_LABEL, isInvestmentType, isLiabilityType } from '../accountTypes';
 import { capitalize } from '../categories';
 import { useLang } from '../prefs';
 import ConnectBank from './ConnectBank';
@@ -63,6 +63,7 @@ function AddAccount() {
   const [contributed, setContributed] = useState('');
 
   const showContributed = isInvestmentType(type);
+  const isLiability = isLiabilityType(type);
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -70,7 +71,9 @@ function AddAccount() {
     addAccount({
       name,
       type,
-      balance: Number(balance),
+      // Liabilities (credit cards) are entered as a positive amount owed but
+      // stored negative so they subtract from net worth.
+      balance: isLiability ? -Math.abs(Number(balance)) : Number(balance),
       contributed: showContributed && contributed !== '' ? Number(contributed) : undefined,
     });
     setName('');
@@ -93,7 +96,7 @@ function AddAccount() {
         <input
           type="number"
           step="0.01"
-          placeholder={t('Current value')}
+          placeholder={isLiability ? t('Amount owed') : t('Current value')}
           value={balance}
           onChange={(e) => setBalance(e.target.value)}
           required
@@ -117,20 +120,25 @@ function AccountRow({ account }: { account: Account }) {
   const updateAccount = useMutation(api.accounts.update);
   const removeAccount = useMutation(api.accounts.remove);
 
+  // Liabilities are stored negative; show their magnitude in the edit field.
+  const editBalance = (a: Account) =>
+    String(isLiabilityType(a.type) ? Math.abs(a.balance) : a.balance);
+
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(account.name);
   const [type, setType] = useState(account.type);
-  const [balance, setBalance] = useState(String(account.balance));
+  const [balance, setBalance] = useState(editBalance(account));
   const [contributed, setContributed] = useState(
     account.contributed != null ? String(account.contributed) : ''
   );
 
   const showContributed = isInvestmentType(type);
+  const isLiability = isLiabilityType(type);
 
   function startEdit() {
     setName(account.name);
     setType(account.type);
-    setBalance(String(account.balance));
+    setBalance(editBalance(account));
     setContributed(account.contributed != null ? String(account.contributed) : '');
     setEditing(true);
   }
@@ -140,7 +148,7 @@ function AccountRow({ account }: { account: Account }) {
       id: account._id as Id<'accounts'>,
       name,
       type,
-      balance: Number(balance),
+      balance: isLiability ? -Math.abs(Number(balance)) : Number(balance),
       contributed: showContributed && contributed !== '' ? Number(contributed) : undefined,
     });
     setEditing(false);
@@ -157,7 +165,13 @@ function AccountRow({ account }: { account: Account }) {
             </option>
           ))}
         </select>
-        <input type="number" step="0.01" value={balance} onChange={(e) => setBalance(e.target.value)} />
+        <input
+          type="number"
+          step="0.01"
+          placeholder={isLiability ? t('Amount owed') : t('Current value')}
+          value={balance}
+          onChange={(e) => setBalance(e.target.value)}
+        />
         <input
           type="number"
           step="0.01"
@@ -195,7 +209,9 @@ function AccountRow({ account }: { account: Account }) {
       ) : (
         <span className="src-detail muted">—</span>
       )}
-      <span className="src-monthly">{usd(account.balance)}</span>
+      <span className={account.balance < 0 ? 'src-monthly neg' : 'src-monthly'}>
+        {usd(account.balance)}
+      </span>
       <button className="link-btn" title="Edit" onClick={startEdit}>
         ✎
       </button>

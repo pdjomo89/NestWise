@@ -118,7 +118,7 @@ function AppContent() {
           ))}
         {tab === 'advice' &&
           (summary && budget ? (
-            <Advice summary={summary} budget={budget} />
+            <Advice summary={summary} budget={budget} accounts={accounts ?? []} />
           ) : (
             <p className="muted">{t('Loading…')}</p>
           ))}
