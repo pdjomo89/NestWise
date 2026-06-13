@@ -56,7 +56,7 @@ function AppContent() {
   const accounts = useQuery(api.accounts.list);
   const transactions = useQuery(api.transactions.list);
   const budget = useQuery(api.budget.get, { lang });
-  const retirementPlan = useQuery(api.retirement.getPlan);
+  const retirementPlans = useQuery(api.retirement.listPlans);
 
   return (
     <div className="app">
@@ -107,10 +107,10 @@ function AppContent() {
         {tab === 'settings' && <Settings />}
         {tab === 'budget' && <Budget />}
         {tab === 'retirement' &&
-          (summary && budget && retirementPlan !== undefined ? (
+          (summary && budget && retirementPlans !== undefined ? (
             <RetirementPlanner
-              plan={retirementPlan}
-              currentSavings={summary.netWorth}
+              plans={retirementPlans}
+              netWorth={summary.netWorth}
               suggestedContribution={Math.max(0, Math.round(budget.surplus))}
             />
           ) : (

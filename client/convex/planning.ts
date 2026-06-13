@@ -3,60 +3,100 @@ import { v } from 'convex/values';
 
 const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 
+type PlanInput = {
+  currentAge: number;
+  retirementAge: number;
+  currentSavings: number;
+  monthlyContribution: number;
+  annualReturn: number; // e.g. 0.06
+  annualInflation: number; // e.g. 0.025
+};
+
+const planFields = {
+  currentAge: v.number(),
+  retirementAge: v.number(),
+  currentSavings: v.number(),
+  monthlyContribution: v.number(),
+  annualReturn: v.number(), // e.g. 0.06
+  annualInflation: v.number(), // e.g. 0.025
+};
+
+// Core monthly-compounding projection for a single plan. Shared by the
+// single-plan query and the household roll-up so the math stays in one place.
+function project(args: PlanInput) {
+  const {
+    currentAge,
+    retirementAge,
+    currentSavings,
+    monthlyContribution,
+    annualReturn,
+    annualInflation,
+  } = args;
+
+  const years = Math.max(0, retirementAge - currentAge);
+  const months = Math.round(years * 12);
+  const monthlyRate = annualReturn / 12;
+
+  const series: { age: number; balance: number; contributed: number }[] = [];
+  let balance = currentSavings;
+  let contributed = currentSavings;
+
+  for (let m = 1; m <= months; m++) {
+    balance = balance * (1 + monthlyRate) + monthlyContribution;
+    contributed += monthlyContribution;
+    if (m % 12 === 0) {
+      series.push({
+        age: currentAge + m / 12,
+        balance: round2(balance),
+        contributed: round2(contributed),
+      });
+    }
+  }
+
+  const futureValue = round2(balance);
+  const realValue = round2(balance / Math.pow(1 + annualInflation, years));
+  const totalContributed = round2(contributed);
+  const sustainableAnnualIncome = round2(futureValue * 0.04); // 4% rule
+
+  return {
+    years,
+    futureValue,
+    realValue,
+    totalContributed,
+    totalGrowth: round2(futureValue - totalContributed),
+    sustainableAnnualIncome,
+    sustainableMonthlyIncome: round2(sustainableAnnualIncome / 12),
+    series,
+  };
+}
+
 // Retirement projection — monthly-compounding math, computed server-side.
 export const projectRetirement = query({
-  args: {
-    currentAge: v.number(),
-    retirementAge: v.number(),
-    currentSavings: v.number(),
-    monthlyContribution: v.number(),
-    annualReturn: v.number(), // e.g. 0.06
-    annualInflation: v.number(), // e.g. 0.025
-  },
-  handler: async (_ctx, args) => {
-    const {
-      currentAge,
-      retirementAge,
-      currentSavings,
-      monthlyContribution,
-      annualReturn,
-      annualInflation,
-    } = args;
+  args: planFields,
+  handler: async (_ctx, args) => project(args),
+});
 
-    const years = Math.max(0, retirementAge - currentAge);
-    const months = Math.round(years * 12);
-    const monthlyRate = annualReturn / 12;
-
-    const series: { age: number; balance: number; contributed: number }[] = [];
-    let balance = currentSavings;
-    let contributed = currentSavings;
-
-    for (let m = 1; m <= months; m++) {
-      balance = balance * (1 + monthlyRate) + monthlyContribution;
-      contributed += monthlyContribution;
-      if (m % 12 === 0) {
-        series.push({
-          age: currentAge + m / 12,
-          balance: round2(balance),
-          contributed: round2(contributed),
-        });
-      }
-    }
-
-    const futureValue = round2(balance);
-    const realValue = round2(balance / Math.pow(1 + annualInflation, years));
-    const totalContributed = round2(contributed);
-    const sustainableAnnualIncome = round2(futureValue * 0.04); // 4% rule
-
+// Household roll-up: project every plan and sum the headline figures. Used by
+// the dashboard outlook and advice so a couple sees their combined nest egg.
+// `years` is reported as a min–max range since plans can retire in different
+// years. The per-plan chart series isn't summed here (ages don't align) — the
+// Retirement tab draws each plan's own chart.
+export const projectHousehold = query({
+  args: { plans: v.array(v.object(planFields)) },
+  handler: async (_ctx, { plans }) => {
+    const results = plans.map(project);
+    const sum = (pick: (r: ReturnType<typeof project>) => number) =>
+      round2(results.reduce((acc, r) => acc + pick(r), 0));
     return {
-      years,
-      futureValue,
-      realValue,
-      totalContributed,
-      totalGrowth: round2(futureValue - totalContributed),
-      sustainableAnnualIncome,
-      sustainableMonthlyIncome: round2(sustainableAnnualIncome / 12),
-      series,
+      count: results.length,
+      futureValue: sum((r) => r.futureValue),
+      realValue: sum((r) => r.realValue),
+      totalContributed: sum((r) => r.totalContributed),
+      totalGrowth: sum((r) => r.totalGrowth),
+      sustainableAnnualIncome: sum((r) => r.sustainableAnnualIncome),
+      sustainableMonthlyIncome: sum((r) => r.sustainableMonthlyIncome),
+      minYears: results.length ? Math.min(...results.map((r) => r.years)) : 0,
+      maxYears: results.length ? Math.max(...results.map((r) => r.years)) : 0,
     };
   },
 });

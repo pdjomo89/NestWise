@@ -81,6 +81,11 @@ const FR: Record<string, string> = {
   Category: 'Catégorie',
   Amount: 'Montant',
   'No transactions yet.': 'Aucune transaction.',
+  'Date range': 'Plage de dates',
+  Clear: 'Effacer',
+  'Filters the Transactions tab — your data isn’t changed.':
+    'Filtre l’onglet Transactions — vos données ne sont pas modifiées.',
+  'Filtered by date': 'Filtré par date',
   // Accounts
   'Invested (cost basis)': 'Investi (coût de base)',
   'Investment value': 'Valeur des placements',
@@ -135,6 +140,21 @@ const FR: Record<string, string> = {
   Annually: 'Annuel',
   // Retirement
   'Retirement planner': 'Planificateur de retraite',
+  'Track a plan for each person (e.g. you and your spouse). Saving stores every field — the dashboard outlook uses the combined household total.':
+    'Suivez un plan par personne (ex. vous et votre conjoint). L’enregistrement conserve chaque champ — la perspective du tableau de bord utilise le total combiné du ménage.',
+  '+ Add plan': '+ Ajouter un plan',
+  'Combined household': 'Ménage combiné',
+  'Combined nest egg': 'Épargne combinée',
+  'Combined sustainable income': 'Revenu viable combiné',
+  'Sum across all plans. The dashboard outlook shows this combined total.':
+    'Somme de tous les plans. La perspective du tableau de bord affiche ce total combiné.',
+  'Plan name': 'Nom du plan',
+  'Remove plan': 'Supprimer le plan',
+  'Projected nest egg': 'Épargne projetée',
+  You: 'Vous',
+  Spouse: 'Conjoint',
+  plans: 'plans',
+  contributed: 'cotisés',
   'Current age': 'Âge actuel',
   'Retirement age': 'Âge de la retraite',
   'Current savings ($)': 'Épargne actuelle ($)',
@@ -203,10 +223,21 @@ const CurrencyContext = createContext<{ currency: Currency; setCurrency: (c: Cur
   currency: 'USD',
   setCurrency: () => {},
 });
+// View-only date filter for the Transactions list. Empty string = unbounded on
+// that end. Lives device-local (localStorage) — it's a display preference, not
+// data, so it doesn't sync to Convex.
+const DateRangeContext = createContext<{
+  from: string;
+  to: string;
+  setFrom: (d: string) => void;
+  setTo: (d: string) => void;
+  clear: () => void;
+}>({ from: '', to: '', setFrom: () => {}, setTo: () => {}, clear: () => {} });
 
 export const useTheme = () => useContext(ThemeContext);
 export const useLang = () => useContext(LangContext);
 export const useCurrency = () => useContext(CurrencyContext);
+export const useDateRange = () => useContext(DateRangeContext);
 
 export function PrefsProvider({ children }: { children: ReactNode }) {
   // localStorage seeds the initial value so there's no flash before Convex loads.
@@ -219,6 +250,8 @@ export function PrefsProvider({ children }: { children: ReactNode }) {
   const [currency, setCurrencyState] = useState<Currency>(
     () => localStorage.getItem('nw-currency') || 'USD'
   );
+  const [dateFrom, setDateFrom] = useState(() => localStorage.getItem('nw-txn-from') || '');
+  const [dateTo, setDateTo] = useState(() => localStorage.getItem('nw-txn-to') || '');
 
   // Convex is the durable, cross-device store — but only for signed-in users.
   // Signed out (on the sign-in page) we stay on localStorage only.
@@ -246,6 +279,11 @@ export function PrefsProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     localStorage.setItem('nw-currency', currency);
   }, [currency]);
+
+  useEffect(() => {
+    localStorage.setItem('nw-txn-from', dateFrom);
+    localStorage.setItem('nw-txn-to', dateTo);
+  }, [dateFrom, dateTo]);
 
   // On load (once signed in): adopt server prefs (e.g. changed on another
   // device); if none exist yet, migrate the current local prefs up to the server.
@@ -294,7 +332,20 @@ export function PrefsProvider({ children }: { children: ReactNode }) {
         }}
       >
         <CurrencyContext.Provider value={{ currency, setCurrency: applyCurrency }}>
-          {children}
+          <DateRangeContext.Provider
+            value={{
+              from: dateFrom,
+              to: dateTo,
+              setFrom: setDateFrom,
+              setTo: setDateTo,
+              clear: () => {
+                setDateFrom('');
+                setDateTo('');
+              },
+            }}
+          >
+            {children}
+          </DateRangeContext.Provider>
         </CurrencyContext.Provider>
       </LangContext.Provider>
     </ThemeContext.Provider>

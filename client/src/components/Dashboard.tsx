@@ -24,7 +24,7 @@ export default function Dashboard({
 }) {
   const { t, lang } = useLang();
   const budget = useQuery(api.budget.get, { lang });
-  const plan = useQuery(api.retirement.getPlan);
+  const plans = useQuery(api.retirement.listPlans);
 
   if (!summary) return <p className="muted">{t('Loading…')}</p>;
 
@@ -55,7 +55,7 @@ export default function Dashboard({
         />
       </section>
 
-      {plan === null && (
+      {plans !== undefined && plans.length === 0 && (
         <section className="panel">
           <h2>{t('Retirement outlook')}</h2>
           <p className="muted">
@@ -63,11 +63,11 @@ export default function Dashboard({
           </p>
         </section>
       )}
-      {plan && budget && (
+      {plans && plans.length > 0 && budget && (
         <RetirementOutlook
-          plan={plan}
-          currentSavings={plan.currentSavings ?? summary.netWorth}
-          monthlyContribution={plan.monthlyContribution ?? Math.max(0, budget.surplus)}
+          plans={plans}
+          netWorth={summary.netWorth}
+          surplus={Math.max(0, budget.surplus)}
         />
       )}
 
@@ -187,45 +187,54 @@ function SurplusPanel({ budget }: { budget: Budget }) {
 }
 
 function RetirementOutlook({
-  plan,
-  currentSavings,
-  monthlyContribution,
+  plans,
+  netWorth,
+  surplus,
 }: {
-  plan: RetirementPlan;
-  currentSavings: number;
-  monthlyContribution: number;
+  plans: RetirementPlan[];
+  netWorth: number;
+  surplus: number;
 }) {
   const { t } = useLang();
-  const projection = useQuery(api.planning.projectRetirement, {
-    currentAge: plan.currentAge,
-    retirementAge: plan.retirementAge,
-    currentSavings,
-    monthlyContribution,
-    annualReturn: plan.annualReturn,
-    annualInflation: plan.annualInflation,
-  });
-  if (!projection) return null;
+  // Mirror the Retirement tab: a lone plan with blank figures falls back to live
+  // net worth / surplus; with several plans each holds its own numbers.
+  const isOnly = plans.length === 1;
+  const inputs = plans.map((p, i) => ({
+    currentAge: p.currentAge,
+    retirementAge: p.retirementAge,
+    currentSavings: p.currentSavings ?? (isOnly && i === 0 ? netWorth : 0),
+    monthlyContribution: p.monthlyContribution ?? (isOnly && i === 0 ? surplus : 0),
+    annualReturn: p.annualReturn,
+    annualInflation: p.annualInflation,
+  }));
+  const household = useQuery(api.planning.projectHousehold, { plans: inputs });
+  if (!household) return null;
+
+  const years =
+    household.minYears === household.maxYears
+      ? `${household.minYears}`
+      : `${household.minYears}–${household.maxYears}`;
+  const monthlyContribution = inputs.reduce((acc, p) => acc + p.monthlyContribution, 0);
+  const nestEggLabel =
+    plans.length > 1 ? t('Combined nest egg') : t('Projected nest egg');
 
   return (
     <section className="panel">
       <h2>{t('Retirement outlook')}</h2>
       <div className="cards">
-        <StatCard
-          label={`${t('Projected nest egg at')} ${plan.retirementAge}`}
-          value={usd(projection.futureValue)}
-          accent="gold"
-        />
-        <StatCard label={t("In today's dollars")} value={usd(projection.realValue)} accent="green" />
-        <StatCard label={t('Years to retirement')} value={`${projection.years}`} accent="slate" />
+        <StatCard label={nestEggLabel} value={usd(household.futureValue)} accent="gold" />
+        <StatCard label={t("In today's dollars")} value={usd(household.realValue)} accent="green" />
+        <StatCard label={t('Years to retirement')} value={years} accent="slate" />
         <StatCard
           label={t('Sustainable income')}
-          value={`${usd(projection.sustainableMonthlyIncome)}/${t('mo')}`}
+          value={`${usd(household.sustainableMonthlyIncome)}/${t('mo')}`}
           accent="green"
         />
       </div>
       <p className="muted small" style={{ marginTop: 12 }}>
-        {usd(currentSavings)} {t('net worth')} · {usd(monthlyContribution)}/{t('mo')} ·{' '}
-        {(plan.annualReturn * 100).toFixed(1)}%
+        {plans.length > 1
+          ? `${plans.length} ${t('plans')} · ${usd(monthlyContribution)}/${t('mo')} ${t('contributed')}`
+          : `${usd(monthlyContribution)}/${t('mo')} ${t('contributed')}`}
         <br />
         {t('Live from your current figures — adjust assumptions in the Retirement tab.')}
       </p>

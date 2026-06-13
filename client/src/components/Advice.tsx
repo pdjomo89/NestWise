@@ -48,19 +48,23 @@ export default function Advice({
     ? { label: t(capitalize(topCat.category)), total: topCat.total }
     : undefined;
 
-  // Live retirement projection (same math as the dashboard outlook) so advice
-  // can tell whether they're on track.
-  const plan = useQuery(api.retirement.getPlan);
+  // Live combined retirement projection across all plans (same roll-up as the
+  // dashboard outlook) so advice can tell whether the household is on track.
+  const plans = useQuery(api.retirement.listPlans);
+  const isOnly = (plans?.length ?? 0) === 1;
   const projection = useQuery(
-    api.planning.projectRetirement,
-    plan
+    api.planning.projectHousehold,
+    plans
       ? {
-          currentAge: plan.currentAge,
-          retirementAge: plan.retirementAge,
-          currentSavings: plan.currentSavings ?? summary.netWorth,
-          monthlyContribution: plan.monthlyContribution ?? Math.max(0, budget.surplus),
-          annualReturn: plan.annualReturn,
-          annualInflation: plan.annualInflation,
+          plans: plans.map((p, i) => ({
+            currentAge: p.currentAge,
+            retirementAge: p.retirementAge,
+            currentSavings: p.currentSavings ?? (isOnly && i === 0 ? summary.netWorth : 0),
+            monthlyContribution:
+              p.monthlyContribution ?? (isOnly && i === 0 ? Math.max(0, budget.surplus) : 0),
+            annualReturn: p.annualReturn,
+            annualInflation: p.annualInflation,
+          })),
         }
       : 'skip'
   );
@@ -73,7 +77,10 @@ export default function Advice({
     cashReserves,
     investmentValue,
     retirementValue,
-    retirementSustainableIncome: projection?.sustainableMonthlyIncome,
+    // Undefined when there are no plans yet, so advice falls back to the
+    // "start saving for retirement" tip instead of "you're behind".
+    retirementSustainableIncome:
+      plans && plans.length > 0 ? projection?.sustainableMonthlyIncome : undefined,
     topCategory,
     lang,
   });

@@ -67,6 +67,7 @@ async function seedHouseholdData(ctx: MutationCtx, userId: Id<'users'>) {
 async function seedRetirementPlan(ctx: MutationCtx, userId: Id<'users'>) {
   await ctx.db.insert('retirementPlan', {
     userId,
+    label: 'You',
     currentAge: 30,
     retirementAge: 65,
     annualReturn: 0.06,

@@ -81,12 +81,15 @@ export default defineSchema({
     frequency,
   }).index('by_user', ['userId']),
 
-  // The saved retirement plan (one row per user). Rates are decimals (0.06 = 6%).
-  // currentSavings and monthlyContribution are optional overrides: when set
-  // they take precedence over the live net worth / budget surplus; when absent
-  // the app falls back to those live figures (keeps older rows valid too).
+  // Saved retirement plans — one or more per user (e.g. one per spouse). Rates
+  // are decimals (0.06 = 6%). currentSavings and monthlyContribution are
+  // optional overrides: when set they take precedence over the live net worth /
+  // budget surplus; when absent the app falls back to those live figures (keeps
+  // older rows valid too). `label` names the plan ("You", "Spouse", …); absent
+  // on legacy single-plan rows, where the UI falls back to a default name.
   retirementPlan: defineTable({
     userId: v.id('users'),
+    label: v.optional(v.string()),
     currentAge: v.number(),
     retirementAge: v.number(),
     annualReturn: v.number(),

@@ -4,7 +4,7 @@ import { api } from '../../convex/_generated/api';
 import { Account, Transaction, Id } from '../types';
 import { usdCents } from '../format';
 import { colorFor, capitalize } from '../categories';
-import { useLang } from '../prefs';
+import { useLang, useDateRange } from '../prefs';
 
 const CATEGORIES = ['income', 'housing', 'food', 'bills', 'transport', 'savings', 'general'];
 
@@ -16,6 +16,7 @@ export default function Transactions({
   accounts: Account[];
 }) {
   const { t } = useLang();
+  const { from, to } = useDateRange();
   const addTransaction = useMutation(api.transactions.add);
   const updateTransaction = useMutation(api.transactions.update);
   const removeTransaction = useMutation(api.transactions.remove);
@@ -47,6 +48,13 @@ export default function Transactions({
       setBusy(false);
     }
   }
+
+  // Transaction dates are ISO 'YYYY-MM-DD' strings, so string comparison is a
+  // correct date comparison. An empty bound means open-ended on that side.
+  const filterActive = Boolean(from || to);
+  const visible = transactions.filter(
+    (tr) => (!from || tr.date >= from) && (!to || tr.date <= to)
+  );
 
   return (
     <div className="grid">
@@ -91,6 +99,12 @@ export default function Transactions({
 
       <section className="panel">
         <h2>{t('History')}</h2>
+        {filterActive && (
+          <p className="muted small" style={{ marginTop: -8, marginBottom: 12 }}>
+            {t('Filtered by date')} · {from || '…'} – {to || '…'} · {visible.length}/
+            {transactions.length}
+          </p>
+        )}
         <table className="txn-table">
           <thead>
             <tr>
@@ -102,7 +116,7 @@ export default function Transactions({
             </tr>
           </thead>
           <tbody>
-            {transactions.map((tr) => (
+            {visible.map((tr) => (
               <TransactionRow
                 key={tr._id}
                 txn={tr}
@@ -110,7 +124,7 @@ export default function Transactions({
                 onRemove={removeTransaction}
               />
             ))}
-            {transactions.length === 0 && (
+            {visible.length === 0 && (
               <tr>
                 <td colSpan={5} className="muted">
                   {t('No transactions yet.')}

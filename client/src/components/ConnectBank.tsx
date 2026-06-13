@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { usePlaidLink } from 'react-plaid-link';
 import { useAction, useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
-import { useLang } from '../prefs';
+import { useLang, useDateRange } from '../prefs';
 
 // Where Plaid sends the browser back after an OAuth bank login. Must match an
 // "Allowed redirect URI" registered in the Plaid dashboard (production/Trial).
@@ -31,6 +31,7 @@ function errorMessage(e: unknown): string {
 
 export default function ConnectBank() {
   const { t } = useLang();
+  const { from, to, setFrom, setTo, clear } = useDateRange();
   const createLinkToken = useAction(api.plaid.createLinkToken);
   const exchange = useAction(api.plaid.exchangePublicToken);
   const sync = useAction(api.plaid.sync);
@@ -170,6 +171,31 @@ export default function ConnectBank() {
           {status}
         </p>
       )}
+
+      <div className="row-form" style={{ alignItems: 'center', marginTop: 14 }}>
+        <span className="muted small">{t('Date range')}</span>
+        <input
+          type="date"
+          value={from}
+          max={to || undefined}
+          onChange={(e) => setFrom(e.target.value)}
+        />
+        <span className="muted small">–</span>
+        <input
+          type="date"
+          value={to}
+          min={from || undefined}
+          onChange={(e) => setTo(e.target.value)}
+        />
+        {(from || to) && (
+          <button type="button" className="link-btn" onClick={clear}>
+            {t('Clear')}
+          </button>
+        )}
+      </div>
+      <p className="muted small" style={{ marginTop: 6 }}>
+        {t('Filters the Transactions tab — your data isn’t changed.')}
+      </p>
 
       {hasConnections && (
         <ul className="srclist" style={{ marginTop: 12 }}>
