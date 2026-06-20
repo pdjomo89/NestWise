@@ -24,6 +24,10 @@ export default defineSchema({
     type: v.string(), // checking | savings | retirement | brokerage | iul | crypto | ...
     balance: v.number(), // current value
     contributed: v.optional(v.number()), // cost basis for investments (gain = balance - contributed)
+    // ISO currency code of `balance` (e.g. USD, CAD). Absent on manual accounts,
+    // which are assumed to be in the user's display currency. Set from Plaid for
+    // linked accounts so mixed-currency holdings can be flagged (no FX applied).
+    currency: v.optional(v.string()),
     // Set when the account was imported from a linked bank via Plaid.
     plaidItemId: v.optional(v.string()),
     plaidAccountId: v.optional(v.string()),
@@ -38,6 +42,9 @@ export default defineSchema({
     category: v.string(),
     amount: v.number(), // positive = income, negative = expense
     date: v.string(), // YYYY-MM-DD
+    // ISO currency code of `amount` (e.g. USD, CAD). Absent on manual entries,
+    // which are assumed to be in the user's display currency. Set from Plaid.
+    currency: v.optional(v.string()),
     // Set when imported from Plaid; used to keep syncs idempotent.
     plaidTransactionId: v.optional(v.string()),
   })

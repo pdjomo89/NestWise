@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useMutation } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { Account, Transaction, Id } from '../types';
-import { usdCents } from '../format';
+import { usdCents, displayCurrency } from '../format';
 import { colorFor, capitalize } from '../categories';
 import { useLang, useDateRange } from '../prefs';
 
@@ -233,7 +233,12 @@ function TransactionRow({
           {t(capitalize(txn.category))}
         </span>
       </td>
-      <td className={`num ${txn.amount < 0 ? 'neg' : 'pos'}`}>{usdCents(txn.amount)}</td>
+      <td className={`num ${txn.amount < 0 ? 'neg' : 'pos'}`}>
+        {usdCents(txn.amount, txn.currency)}
+        {txn.currency && txn.currency !== displayCurrency() && (
+          <span className="cur-code"> {txn.currency}</span>
+        )}
+      </td>
       <td>
         <div className="row-actions">
           <button className="link-btn" title="Edit" onClick={startEdit}>

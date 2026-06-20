@@ -697,6 +697,14 @@ button[disabled] { opacity: 0.6; cursor: default; }
   min-width: 92px;
   text-align: right;
 }
+/* Native currency code shown beside an amount whose currency differs from the
+   display currency (e.g. "CA$1,200 CAD" while the app displays USD). */
+.cur-code {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+}
 .src-edit {
   display: grid;
   grid-template-columns: 1fr 1.4fr 1fr 1.2fr auto;

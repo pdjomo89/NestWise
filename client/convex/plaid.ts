@@ -17,6 +17,19 @@ type SyncResult = { items: number; imported: number; removed: number };
 // with no extra bundling. Secrets live in Convex env vars — never the client.
 // ---------------------------------------------------------------------------
 
+// Which countries' institutions Plaid Link offers. Defaults to US + Canada;
+// override with a comma-separated PLAID_COUNTRY_CODES env var (e.g. "US,CA,GB").
+// Real (non-sandbox) coverage still depends on those regions being enabled for
+// the Plaid account in the dashboard.
+function plaidCountryCodes(): string[] {
+  const raw = process.env.PLAID_COUNTRY_CODES ?? 'US,CA';
+  const codes = raw
+    .split(',')
+    .map((c) => c.trim().toUpperCase())
+    .filter(Boolean);
+  return codes.length ? codes : ['US', 'CA'];
+}
+
 function plaidConfig() {
   const clientId = process.env.PLAID_CLIENT_ID;
   const secret = process.env.PLAID_SECRET;
@@ -119,7 +132,7 @@ export const createLinkToken = action({
       // Scope Plaid's user to our user so re-links map to the same Plaid user.
       user: { client_user_id: userId },
       products: ['transactions'],
-      country_codes: ['US'],
+      country_codes: plaidCountryCodes(),
       language: 'en',
       ...(useOAuthRedirect ? { redirect_uri: redirectUri } : {}),
     });
@@ -221,6 +234,9 @@ export const syncCore = internalAction({
           name: a.name as string,
           type,
           balance,
+          currency: (a.balances?.iso_currency_code ??
+            a.balances?.unofficial_currency_code ??
+            undefined) as string | undefined,
         };
       });
 
@@ -250,6 +266,9 @@ export const syncCore = internalAction({
         category: mapCategory(t.personal_finance_category?.primary),
         amount: toNestAmount(t.amount),
         date: t.date as string,
+        currency: (t.iso_currency_code ?? t.unofficial_currency_code ?? undefined) as
+          | string
+          | undefined,
       });
 
       const result = await ctx.runMutation(internal.plaid.applySync, {
@@ -333,6 +352,7 @@ const acctArg = v.object({
   name: v.string(),
   type: v.string(),
   balance: v.number(),
+  currency: v.optional(v.string()),
 });
 const txnArg = v.object({
   plaidTransactionId: v.string(),
@@ -341,6 +361,7 @@ const txnArg = v.object({
   category: v.string(),
   amount: v.number(),
   date: v.string(),
+  currency: v.optional(v.string()),
 });
 
 // Apply one sync's worth of accounts + transactions atomically for one user,
@@ -373,6 +394,7 @@ export const applySync = internalMutation({
           name: a.name,
           type: a.type,
           balance: a.balance,
+          currency: a.currency,
           plaidItemId: a.plaidItemId,
         });
         idByPlaid.set(a.plaidAccountId, existing[0]._id);
@@ -382,6 +404,7 @@ export const applySync = internalMutation({
           name: a.name,
           type: a.type,
           balance: a.balance,
+          currency: a.currency,
           plaidItemId: a.plaidItemId,
           plaidAccountId: a.plaidAccountId,
         });
@@ -404,6 +427,7 @@ export const applySync = internalMutation({
         category: t.category,
         amount: t.amount,
         date: t.date,
+        currency: t.currency,
         plaidTransactionId: t.plaidTransactionId,
       };
       if (existing[0]) await ctx.db.patch(existing[0]._id, fields);

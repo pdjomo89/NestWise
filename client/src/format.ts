@@ -12,17 +12,23 @@ export const setCurrency = (c: string) => {
 };
 const isFr = () => locale === 'fr-FR';
 
-const money = (n: number, opts: Intl.NumberFormatOptions) =>
+// `code` overrides the global display currency for this one amount — used to
+// render a linked account/transaction in its own native currency (no FX).
+const money = (n: number, opts: Intl.NumberFormatOptions, code?: string) =>
   n.toLocaleString(locale, {
     style: 'currency',
-    currency,
+    currency: code ?? currency,
     currencyDisplay: 'narrowSymbol',
     ...opts,
   });
 
-export const usd = (n: number) => money(n, { maximumFractionDigits: 0 });
+export const usd = (n: number, code?: string) => money(n, { maximumFractionDigits: 0 }, code);
 
-export const usdCents = (n: number) => money(n, {});
+export const usdCents = (n: number, code?: string) => money(n, {}, code);
+
+// The active global display currency (e.g. USD). Used to decide whether a
+// native-currency amount needs an explicit code badge to avoid ambiguity.
+export const displayCurrency = () => currency;
 
 const currencySymbol = () => {
   const parts = new Intl.NumberFormat(locale, {

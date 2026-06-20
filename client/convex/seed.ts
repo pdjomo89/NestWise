@@ -25,15 +25,29 @@ async function seedAccountsAndTransactions(ctx: MutationCtx, userId: Id<'users'>
     type: 'retirement',
     balance: 68000,
   });
+  // A linked-style Canadian account, held in CAD, to exercise multi-currency
+  // display: native formatting, the currency-code badge, and the mixed-currency
+  // warning when it sits alongside the USD accounts above.
+  const cadChequing = await ctx.db.insert('accounts', {
+    userId,
+    name: 'RBC Chequing (CAD)',
+    type: 'checking',
+    balance: 3150,
+    currency: 'CAD',
+  });
 
+  // USD transactions carry no currency (assumed to be the display currency);
+  // the CAD ones are tagged so they format and badge in CAD.
   const txns = [
-    [checking, 'Monthly salary', 'income', 5200, '2026-06-01'],
-    [checking, 'Rent', 'housing', -1800, '2026-06-02'],
-    [checking, 'Groceries', 'food', -420, '2026-06-03'],
-    [savings, 'Transfer to savings', 'savings', 600, '2026-06-04'],
-    [checking, 'Utilities', 'bills', -210, '2026-06-05'],
+    [checking, 'Monthly salary', 'income', 5200, '2026-06-01', undefined],
+    [checking, 'Rent', 'housing', -1800, '2026-06-02', undefined],
+    [checking, 'Groceries', 'food', -420, '2026-06-03', undefined],
+    [savings, 'Transfer to savings', 'savings', 600, '2026-06-04', undefined],
+    [checking, 'Utilities', 'bills', -210, '2026-06-05', undefined],
+    [cadChequing, 'Tim Hortons', 'food', -18.5, '2026-06-03', 'CAD'],
+    [cadChequing, 'Presto transit', 'transport', -45, '2026-06-04', 'CAD'],
   ] as const;
-  for (const [accountId, description, category, amount, date] of txns) {
+  for (const [accountId, description, category, amount, date, currency] of txns) {
     await ctx.db.insert('transactions', {
       userId,
       accountId,
@@ -41,6 +55,7 @@ async function seedAccountsAndTransactions(ctx: MutationCtx, userId: Id<'users'>
       category,
       amount,
       date,
+      currency,
     });
   }
 }

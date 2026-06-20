@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useMutation } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { Account, Id } from '../types';
-import { usd } from '../format';
+import { usd, displayCurrency } from '../format';
 import { ACCOUNT_TYPES, ACCOUNT_TYPE_LABEL, isInvestmentType, isLiabilityType } from '../accountTypes';
 import { capitalize } from '../categories';
 import { useLang } from '../prefs';
@@ -19,6 +19,12 @@ export default function Accounts({ accounts }: { accounts: Account[] }) {
   const gain = invValue - invCost;
   const gainPct = invCost > 0 ? gain / invCost : 0;
 
+  // Accounts can hold different native currencies (e.g. a linked Canadian bank
+  // in CAD alongside US accounts in USD). The totals above sum the raw numbers
+  // with no FX conversion, so flag when more than one currency is present.
+  const currencies = [...new Set(accounts.map((a) => a.currency || displayCurrency()))];
+  const mixedCurrency = currencies.length > 1;
+
   return (
     <div className="grid">
       <section className="cards">
@@ -31,6 +37,13 @@ export default function Accounts({ accounts }: { accounts: Account[] }) {
           accent={gain >= 0 ? 'green' : 'red'}
         />
       </section>
+
+      {mixedCurrency && (
+        <p className="muted small" role="note">
+          ⚠️ {t('Your accounts use multiple currencies')} ({currencies.join(', ')}).{' '}
+          {t('Totals above add the raw amounts without converting between currencies.')}
+        </p>
+      )}
 
       <ConnectBank />
 
@@ -210,7 +223,10 @@ function AccountRow({ account }: { account: Account }) {
         <span className="src-detail muted">—</span>
       )}
       <span className={account.balance < 0 ? 'src-monthly neg' : 'src-monthly'}>
-        {usd(account.balance)}
+        {usd(account.balance, account.currency)}
+        {account.currency && account.currency !== displayCurrency() && (
+          <span className="cur-code"> {account.currency}</span>
+        )}
       </span>
       <button className="link-btn" title="Edit" onClick={startEdit}>
         ✎
