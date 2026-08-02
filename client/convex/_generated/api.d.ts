@@ -23,6 +23,7 @@ import type * as retirement from "../retirement.js";
 import type * as seed from "../seed.js";
 import type * as summary from "../summary.js";
 import type * as transactions from "../transactions.js";
+import type * as trends from "../trends.js";
 import type * as users from "../users.js";
 
 import type {
@@ -47,6 +48,7 @@ declare const fullApi: ApiFromModules<{
   seed: typeof seed;
   summary: typeof summary;
   transactions: typeof transactions;
+  trends: typeof trends;
   users: typeof users;
 }>;
 

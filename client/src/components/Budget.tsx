@@ -7,7 +7,17 @@ import { usd } from '../format';
 import { colorFor, capitalize } from '../categories';
 import { useLang } from '../prefs';
 
-const EXPENSE_CATEGORIES = ['housing', 'food', 'bills', 'transport', 'savings', 'general'];
+const EXPENSE_CATEGORIES = [
+  'housing',
+  'food',
+  'bills',
+  'transport',
+  'savings',
+  'entertainment',
+  'shopping',
+  'health',
+  'general',
+];
 const PERSON_COLORS = ['#6366f1', '#06b6d4', '#ec4899', '#f59e0b'];
 const personColor = (i: number) => PERSON_COLORS[i % PERSON_COLORS.length];
 

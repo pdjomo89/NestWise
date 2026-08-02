@@ -116,6 +116,28 @@ const FR: Record<string, string> = {
   Plus: 'Plus',
   'in one-off transactions logged this month, included in your monthly expenses above.':
     'en transactions ponctuelles enregistrées ce mois-ci, incluses dans vos dépenses mensuelles ci-dessus.',
+  // Spending trends + savings plan
+  'Spending trends': 'Tendances des dépenses',
+  'How each category has moved over recent months, from your logged transactions.':
+    'Évolution de chaque catégorie sur les derniers mois, d’après vos transactions enregistrées.',
+  'Not enough transaction history yet to show a trend.':
+    'Pas encore assez d’historique de transactions pour afficher une tendance.',
+  Latest: 'Dernier',
+  'vs avg': 'vs moy.',
+  new: 'nouveau',
+  flat: 'stable',
+  'Savings plan': 'Plan d’épargne',
+  'No categories are running above their usual level — spending looks steady.':
+    'Aucune catégorie au-dessus de son niveau habituel — les dépenses semblent stables.',
+  Trim: 'Réduire de',
+  about: 'environ',
+  'of income': 'du revenu',
+  'Targets bring each rising category back to its own recent average.':
+    'Les objectifs ramènent chaque catégorie en hausse à sa propre moyenne récente.',
+  'Potential monthly savings': 'Économies mensuelles potentielles',
+  'Trim your spending': 'Réduisez vos dépenses',
+  'These categories are running above their recent average — see Spending trends on the Dashboard for the month-by-month view.':
+    'Ces catégories dépassent leur moyenne récente — consultez les Tendances des dépenses sur le tableau de bord pour la vue mois par mois.',
   // Category names (stored as lowercase keys, shown capitalized)
   Income: 'Revenu',
   Housing: 'Logement',
@@ -123,6 +145,9 @@ const FR: Record<string, string> = {
   Bills: 'Factures',
   Transport: 'Transport',
   Savings: 'Épargne',
+  Entertainment: 'Divertissement',
+  Shopping: 'Achats',
+  Health: 'Santé',
   General: 'Général',
   // Account type labels (Savings reuses the category entry above)
   Checking: 'Compte courant',

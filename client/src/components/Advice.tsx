@@ -4,7 +4,7 @@ import { api } from '../../convex/_generated/api';
 import { Account, Summary, Budget } from '../types';
 import { usd } from '../format';
 import { isInvestmentType } from '../accountTypes';
-import { capitalize } from '../categories';
+import { capitalize, colorFor } from '../categories';
 import { useLang } from '../prefs';
 
 // Monthly income/expenses are pre-filled from the household budget (Budget tab),
@@ -68,6 +68,11 @@ export default function Advice({
         }
       : 'skip'
   );
+
+  // The auto savings plan from the spending-trends engine — surfaced here so
+  // the Advice tab shows how much overspend the user could realistically trim.
+  const trends = useQuery(api.trends.get, { lang });
+  const plan = trends?.plan;
 
   const advice = useQuery(api.planning.savingsAdvice, {
     monthlyIncome,
@@ -138,7 +143,47 @@ export default function Advice({
             {creditCardDebt > 0 && (
               <Stat label={t('Credit card debt')} value={usd(creditCardDebt)} accent="red" />
             )}
+            {plan && plan.totalMonthly > 0 && (
+              <Stat
+                label={t('Potential monthly savings')}
+                value={usd(plan.totalMonthly)}
+                accent="green"
+              />
+            )}
           </section>
+
+          {plan && plan.totalMonthly > 0 && (
+            <section className="panel">
+              <h2>{t('Trim your spending')}</h2>
+              <p className="save-headline">
+                {t('Trim')} <strong>{usd(plan.totalMonthly)}</strong>/{t('mo')}
+                {plan.incomeShare > 0 && (
+                  <span className="muted small">
+                    {' '}
+                    · {t('about')} {Math.round(plan.incomeShare * 100)}% {t('of income')}
+                  </span>
+                )}
+              </p>
+              <ul className="save-list">
+                {plan.items.map((it) => (
+                  <li key={it.category}>
+                    <span className="save-cat" style={{ color: colorFor(it.category) }}>
+                      {t(capitalize(it.category))}
+                    </span>
+                    <span className="muted small">
+                      {usd(it.from)} → {usd(it.to)}
+                    </span>
+                    <span className="save-amt">
+                      −{usd(it.save)}/{t('mo')}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <p className="muted small">
+                {t('These categories are running above their recent average — see Spending trends on the Dashboard for the month-by-month view.')}
+              </p>
+            </section>
+          )}
 
           <section className="panel">
             <h2>{t('Advice')}</h2>

@@ -36,16 +36,47 @@ async function seedAccountsAndTransactions(ctx: MutationCtx, userId: Id<'users'>
     currency: 'CAD',
   });
 
+  // Several months of history so the spending-trends view and the savings plan
+  // have something to compare. Food and entertainment deliberately creep up
+  // toward the latest month, so the auto plan flags them as running hot.
   // USD transactions carry no currency (assumed to be the display currency);
   // the CAD ones are tagged so they format and badge in CAD.
   const txns = [
+    // May 2026
+    [checking, 'Monthly salary', 'income', 5200, '2026-05-01', undefined],
+    [checking, 'Rent', 'housing', -1800, '2026-05-02', undefined],
+    [checking, 'Utilities', 'bills', -200, '2026-05-05', undefined],
+    [checking, 'Groceries', 'food', -300, '2026-05-08', undefined],
+    [checking, 'Movie night', 'entertainment', -60, '2026-05-12', undefined],
+    [checking, 'Clothing', 'shopping', -140, '2026-05-15', undefined],
+    [savings, 'Transfer to savings', 'savings', 600, '2026-05-04', undefined],
+    [cadChequing, 'Presto transit', 'transport', -45, '2026-05-06', 'CAD'],
+    // June 2026
     [checking, 'Monthly salary', 'income', 5200, '2026-06-01', undefined],
     [checking, 'Rent', 'housing', -1800, '2026-06-02', undefined],
-    [checking, 'Groceries', 'food', -420, '2026-06-03', undefined],
-    [savings, 'Transfer to savings', 'savings', 600, '2026-06-04', undefined],
     [checking, 'Utilities', 'bills', -210, '2026-06-05', undefined],
-    [cadChequing, 'Tim Hortons', 'food', -18.5, '2026-06-03', 'CAD'],
-    [cadChequing, 'Presto transit', 'transport', -45, '2026-06-04', 'CAD'],
+    [checking, 'Groceries', 'food', -345, '2026-06-09', undefined],
+    [checking, 'Concert', 'entertainment', -80, '2026-06-14', undefined],
+    [checking, 'Clothing', 'shopping', -135, '2026-06-16', undefined],
+    [savings, 'Transfer to savings', 'savings', 600, '2026-06-04', undefined],
+    [cadChequing, 'Presto transit', 'transport', -48, '2026-06-06', 'CAD'],
+    // July 2026
+    [checking, 'Monthly salary', 'income', 5200, '2026-07-01', undefined],
+    [checking, 'Rent', 'housing', -1800, '2026-07-02', undefined],
+    [checking, 'Utilities', 'bills', -205, '2026-07-05', undefined],
+    [checking, 'Groceries', 'food', -390, '2026-07-10', undefined],
+    [checking, 'Streaming + events', 'entertainment', -95, '2026-07-13', undefined],
+    [checking, 'Shoes', 'shopping', -145, '2026-07-18', undefined],
+    [savings, 'Transfer to savings', 'savings', 600, '2026-07-04', undefined],
+    [cadChequing, 'Presto transit', 'transport', -47, '2026-07-06', 'CAD'],
+    // August 2026 (current month — food & entertainment running hot)
+    [checking, 'Monthly salary', 'income', 5200, '2026-08-01', undefined],
+    [checking, 'Rent', 'housing', -1800, '2026-08-02', undefined],
+    [checking, 'Utilities', 'bills', -200, '2026-08-05', undefined],
+    [checking, 'Groceries', 'food', -470, '2026-08-08', undefined],
+    [checking, 'Concert tickets', 'entertainment', -185, '2026-08-11', undefined],
+    [checking, 'Clothing', 'shopping', -140, '2026-08-15', undefined],
+    [cadChequing, 'Presto transit', 'transport', -47, '2026-08-06', 'CAD'],
   ] as const;
   for (const [accountId, description, category, amount, date, currency] of txns) {
     await ctx.db.insert('transactions', {

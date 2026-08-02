@@ -6,7 +6,18 @@ import { usdCents, displayCurrency } from '../format';
 import { colorFor, capitalize } from '../categories';
 import { useLang, useDateRange } from '../prefs';
 
-const CATEGORIES = ['income', 'housing', 'food', 'bills', 'transport', 'savings', 'general'];
+const CATEGORIES = [
+  'income',
+  'housing',
+  'food',
+  'bills',
+  'transport',
+  'savings',
+  'entertainment',
+  'shopping',
+  'health',
+  'general',
+];
 
 export default function Transactions({
   transactions,

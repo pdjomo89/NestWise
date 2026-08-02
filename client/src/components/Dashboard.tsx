@@ -6,6 +6,7 @@ import { niceTicks } from '../chart';
 import { colorFor, capitalize } from '../categories';
 import { ACCOUNT_TYPE_LABEL } from '../accountTypes';
 import { useLang } from '../prefs';
+import SpendingTrends from './SpendingTrends';
 
 // Maps the budget status to a status key (translated at render) and an icon.
 const STATUS_META: Record<string, { label: string; icon: string }> = {
@@ -146,6 +147,8 @@ export default function Dashboard({
           </div>
         )}
       </section>
+
+      <SpendingTrends />
     </div>
   );
 }

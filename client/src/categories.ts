@@ -7,6 +7,9 @@ export const CATEGORY_COLORS: Record<string, string> = {
   bills: '#ef4444',
   transport: '#f59e0b',
   savings: '#06b6d4',
+  entertainment: '#ec4899',
+  shopping: '#8b5cf6',
+  health: '#14b8a6',
   general: '#a855f7',
 };
 

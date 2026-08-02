@@ -355,6 +355,125 @@ body {
   text-transform: capitalize;
 }
 
+/* Spending trends: one row per category, mini month bars + a delta badge. */
+.trend-table {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.trend-row {
+  display: grid;
+  grid-template-columns: 96px 1fr 68px 92px;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 4px;
+  border-radius: 8px;
+}
+.trend-row:not(.trend-head):hover {
+  background: var(--panel-2);
+}
+.trend-head {
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.trend-cat {
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.trend-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 34px;
+}
+.trend-head .trend-bars {
+  height: auto;
+  align-items: center;
+}
+.trend-month {
+  flex: 1;
+  text-align: center;
+  font-size: 10px;
+  color: var(--muted);
+}
+.trend-bar-cell {
+  flex: 1;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.trend-bar {
+  width: 70%;
+  max-width: 22px;
+  min-height: 2px;
+  border-radius: 3px 3px 0 0;
+  transition: height 0.3s ease;
+}
+.trend-latest {
+  text-align: right;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.trend-delta {
+  text-align: right;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.badge-up { color: #f87171; }
+.badge-down { color: #4ade80; }
+.badge-new { color: var(--brand-gold); }
+.badge-flat { color: var(--muted); }
+
+/* Auto savings plan under the trend table. */
+.save-plan {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+.save-plan h3 {
+  margin: 0 0 10px;
+  font-size: 14px;
+}
+.save-headline {
+  font-size: 15px;
+  margin: 0 0 12px;
+}
+.save-list {
+  list-style: none;
+  margin: 0 0 10px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.save-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.save-cat {
+  font-weight: 600;
+  font-size: 13px;
+  min-width: 96px;
+}
+.save-amt {
+  margin-left: auto;
+  color: #4ade80;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+@media (max-width: 720px) {
+  .trend-row { grid-template-columns: 72px 1fr 60px 78px; gap: 8px; }
+}
+
 .txn-form, .planner-form {
   display: grid;
   gap: 10px;

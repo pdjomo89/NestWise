@@ -91,6 +91,13 @@ function mapCategory(primary?: string): string {
     case 'TRANSFER_IN':
     case 'TRANSFER_OUT':
       return 'savings';
+    case 'ENTERTAINMENT':
+      return 'entertainment';
+    case 'GENERAL_MERCHANDISE':
+      return 'shopping';
+    case 'MEDICAL':
+    case 'PERSONAL_CARE':
+      return 'health';
     default:
       return 'general';
   }
