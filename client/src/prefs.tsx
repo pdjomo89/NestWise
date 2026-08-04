@@ -153,6 +153,8 @@ const FR: Record<string, string> = {
     'en transactions ponctuelles enregistrées ce mois-ci, incluses dans vos dépenses mensuelles ci-dessus.',
   // Spending trends + savings plan
   'Spending trends': 'Tendances des dépenses',
+  'Earlier months': 'Mois précédents',
+  'Later months': 'Mois suivants',
   'How each category has moved over recent months, from your logged transactions.':
     'Évolution de chaque catégorie sur les derniers mois, d’après vos transactions enregistrées.',
   'Not enough transaction history yet to show a trend.':

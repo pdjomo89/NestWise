@@ -420,7 +420,9 @@ body {
 }
 .grouped-bar {
   flex: 1;
-  max-width: 14px;
+  /* Fewer groups on screen than before, so the bars can be a little wider
+     without turning into blocks. */
+  max-width: 20px;
   border-radius: 4px 4px 0 0;
   transition: height 0.3s ease;
 }
@@ -434,6 +436,24 @@ body {
   text-align: center;
   font-size: 10px;
   color: var(--muted);
+}
+
+/* Month pager above the chart. */
+.grouped-nav {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+.grouped-nav .link-btn {
+  font-size: 18px;
+  line-height: 1;
+  padding: 0 6px;
+}
+.grouped-nav .link-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
 }
 
 /* Legend doubles as the table view: swatch + name + latest + delta. */

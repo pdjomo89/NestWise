@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { usd, usdCompact } from '../format';
@@ -16,10 +17,18 @@ const monthLabel = (key: string, lang: 'en' | 'fr') =>
 
 // Month-over-month category trends plus an auto savings plan. Rendered as a
 // Dashboard section below the single-month spending chart.
+// How many months the chart shows at once. The engine still computes over its
+// full window — the vs-avg baseline and the savings plan need that history —
+// this only narrows what's drawn, and the arrows page back through the rest.
+const WINDOW = 3;
+
 export default function SpendingTrends() {
   const { t, lang } = useLang();
   const { theme } = useTheme();
   const trends = useQuery(api.trends.get, { lang });
+  // Offset of the leftmost visible month; null means "stick to the newest",
+  // so the view follows new data instead of freezing on a stale window.
+  const [offset, setOffset] = useState<number | null>(null);
 
   if (!trends) return null;
   const { months, categories, plan } = trends;
@@ -33,8 +42,15 @@ export default function SpendingTrends() {
     return (ai < 0 ? 99 : ai) - (bi < 0 ? 99 : bi);
   });
 
+  // The visible slice: the most recent WINDOW months unless the arrows moved it.
+  const maxStart = Math.max(0, months.length - WINDOW);
+  const start = Math.min(offset ?? maxStart, maxStart);
+  const visibleMonths = months.slice(start, start + WINDOW);
+
   // One shared y-scale across every bar — the whole point of grouping is that
-  // a tall bar in March means the same as a tall bar in August.
+  // a tall bar in March means the same as a tall bar in August. Scaled to the
+  // FULL range, not the visible slice, so paging never silently rescales the
+  // chart and makes a quiet month look like a big one.
   const peak = Math.max(1, ...series.flatMap((c) => c.byMonth));
   const { axisMax, ticks } = niceTicks(peak);
 
@@ -49,6 +65,33 @@ export default function SpendingTrends() {
         <p className="muted">{t('Not enough transaction history yet to show a trend.')}</p>
       ) : (
         <>
+          {months.length > WINDOW && (
+            <div className="grouped-nav">
+              <button
+                type="button"
+                className="link-btn"
+                onClick={() => setOffset(Math.max(0, start - 1))}
+                disabled={start === 0}
+                title={t('Earlier months')}
+              >
+                ‹
+              </button>
+              <span className="muted small">
+                {monthLabel(visibleMonths[0], lang)} –{' '}
+                {monthLabel(visibleMonths[visibleMonths.length - 1], lang)}
+              </span>
+              <button
+                type="button"
+                className="link-btn"
+                onClick={() => setOffset(Math.min(maxStart, start + 1))}
+                disabled={start >= maxStart}
+                title={t('Later months')}
+              >
+                ›
+              </button>
+            </div>
+          )}
+
           <div className="grouped-chart">
             <div className="grouped-yaxis">
               {[...ticks].reverse().map((v) => (
@@ -65,11 +108,11 @@ export default function SpendingTrends() {
                 ))}
               </div>
               <div className="grouped-months">
-                {months.map((m, mi) => (
+                {visibleMonths.map((m, vi) => (
                   <div className="grouped-month" key={m}>
                     <div className="grouped-bars">
                       {series.map((c) => {
-                        const v = c.byMonth[mi] ?? 0;
+                        const v = c.byMonth[start + vi] ?? 0;
                         return (
                           <span
                             key={c.category}
