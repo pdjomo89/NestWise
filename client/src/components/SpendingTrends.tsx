@@ -1,8 +1,9 @@
 import { useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
-import { usd } from '../format';
-import { colorFor, capitalize } from '../categories';
-import { useLang } from '../prefs';
+import { usd, usdCompact } from '../format';
+import { colorFor, chartColorFor, capitalize, CHART_CATEGORY_ORDER } from '../categories';
+import { niceTicks } from '../chart';
+import { useLang, useTheme } from '../prefs';
 
 // Short month labels for the trend axis, indexed by calendar month (0-11).
 const MONTH_LABELS: Record<'en' | 'fr', string[]> = {
@@ -17,10 +18,25 @@ const monthLabel = (key: string, lang: 'en' | 'fr') =>
 // Dashboard section below the single-month spending chart.
 export default function SpendingTrends() {
   const { t, lang } = useLang();
+  const { theme } = useTheme();
   const trends = useQuery(api.trends.get, { lang });
 
   if (!trends) return null;
   const { months, categories, plan } = trends;
+
+  // Draw in the fixed palette order, not by size: a category keeps its colour
+  // and its slot in every group, so month-to-month comparison is by position as
+  // well as by hue. Anything outside the known set is appended, still stable.
+  const series = [...categories].sort((a, b) => {
+    const ai = CHART_CATEGORY_ORDER.indexOf(a.category);
+    const bi = CHART_CATEGORY_ORDER.indexOf(b.category);
+    return (ai < 0 ? 99 : ai) - (bi < 0 ? 99 : bi);
+  });
+
+  // One shared y-scale across every bar — the whole point of grouping is that
+  // a tall bar in March means the same as a tall bar in August.
+  const peak = Math.max(1, ...series.flatMap((c) => c.byMonth));
+  const { axisMax, ticks } = niceTicks(peak);
 
   return (
     <section className="panel">
@@ -32,51 +48,67 @@ export default function SpendingTrends() {
       {categories.length === 0 ? (
         <p className="muted">{t('Not enough transaction history yet to show a trend.')}</p>
       ) : (
-        <div className="trend-table">
-          <div className="trend-row trend-head">
-            <span className="trend-cat" />
-            <span className="trend-bars">
-              {months.map((m) => (
-                <span key={m} className="trend-month">
-                  {monthLabel(m, lang)}
+        <>
+          <div className="grouped-chart">
+            <div className="grouped-yaxis">
+              {[...ticks].reverse().map((v) => (
+                <span key={v} className="grouped-tick">
+                  {usdCompact(v)}
                 </span>
               ))}
-            </span>
-            <span className="trend-latest">{t('Latest')}</span>
-            <span className="trend-delta">{t('vs avg')}</span>
+            </div>
+            <div className="grouped-plot">
+              {/* Gridlines sit behind the bars and stay recessive. */}
+              <div className="grouped-grid">
+                {[...ticks].reverse().map((v) => (
+                  <span key={v} className="grouped-gridline" />
+                ))}
+              </div>
+              <div className="grouped-months">
+                {months.map((m, mi) => (
+                  <div className="grouped-month" key={m}>
+                    <div className="grouped-bars">
+                      {series.map((c) => {
+                        const v = c.byMonth[mi] ?? 0;
+                        return (
+                          <span
+                            key={c.category}
+                            className="grouped-bar"
+                            style={{
+                              height: `${(v / axisMax) * 100}%`,
+                              // No floor on an empty month — a 2px stub would
+                              // read as "a little was spent" when none was.
+                              minHeight: v > 0 ? 2 : 0,
+                              background: chartColorFor(c.category, theme),
+                            }}
+                            title={`${t(capitalize(c.category))} · ${monthLabel(m, lang)}: ${usd(v)}`}
+                          />
+                        );
+                      })}
+                    </div>
+                    <span className="grouped-month-label">{monthLabel(m, lang)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
 
-          {categories.map((c) => {
-            const max = Math.max(...c.byMonth, 1);
-            return (
-              <div className="trend-row" key={c.category}>
-                <span className="trend-cat" style={{ color: colorFor(c.category) }}>
-                  {t(capitalize(c.category))}
-                </span>
-                <span className="trend-bars">
-                  {c.byMonth.map((v, i) => (
-                    <span
-                      className="trend-bar-cell"
-                      key={i}
-                      title={`${monthLabel(months[i], lang)}: ${usd(v)}`}
-                    >
-                      <span
-                        className="trend-bar"
-                        style={{
-                          height: `${(v / max) * 100}%`,
-                          background: colorFor(c.category),
-                          opacity: i === c.byMonth.length - 1 ? 1 : 0.45,
-                        }}
-                      />
-                    </span>
-                  ))}
-                </span>
-                <span className="trend-latest">{usd(c.latest)}</span>
+          {/* Legend doubles as the table view: identity is never colour alone,
+              and it keeps the Latest / vs-avg figures the rows used to show. */}
+          <ul className="grouped-legend">
+            {series.map((c) => (
+              <li key={c.category}>
+                <span
+                  className="legend-swatch"
+                  style={{ background: chartColorFor(c.category, theme) }}
+                />
+                <span className="legend-name">{t(capitalize(c.category))}</span>
+                <span className="legend-latest">{usd(c.latest)}</span>
                 <DeltaBadge direction={c.direction} delta={c.delta} t={t} />
-              </div>
-            );
-          })}
-        </div>
+              </li>
+            ))}
+          </ul>
+        </>
       )}
 
       <SavingsPlan plan={plan} t={t} />

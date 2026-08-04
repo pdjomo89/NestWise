@@ -96,7 +96,17 @@ export default function ConnectBank() {
     setStatus(null);
     setBusy(true);
     try {
-      const { linkToken } = await createLinkToken({ redirectUri: REDIRECT_URI });
+      const { linkToken, oauthUnavailable } = await createLinkToken({
+        redirectUri: REDIRECT_URI,
+      });
+      // Link opened, but this domain isn't registered with Plaid, so banks that
+      // hand off to their own browser login can't redirect back. Say so up
+      // front rather than letting someone pick one and hit a dead end.
+      if (oauthUnavailable) {
+        setStatus(
+          t('Most banks will work. Banks that open their own login page can’t finish here until this website’s address is added to the Plaid dashboard.')
+        );
+      }
       // Persist before opening so an OAuth redirect can resume after reload.
       localStorage.setItem(TOKEN_KEY, linkToken);
       setOauthReturn(false);

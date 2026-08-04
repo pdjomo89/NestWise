@@ -288,6 +288,8 @@ const FR: Record<string, string> = {
   'Annual plan': 'Forfait annuel',
   Annual: 'Annuel',
   Subscribe: 'S’abonner',
+  'Most banks will work. Banks that open their own login page can’t finish here until this website’s address is added to the Plaid dashboard.':
+    'La plupart des banques fonctionneront. Celles qui ouvrent leur propre page de connexion ne pourront pas terminer ici tant que l’adresse de ce site n’aura pas été ajoutée au tableau de bord Plaid.',
   // Greetings (sign-in screen + dashboard)
   'here’s where your money stands today.': 'voici où en sont vos finances aujourd’hui.',
   'Good morning': 'Bonjour',

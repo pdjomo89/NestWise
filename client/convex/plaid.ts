@@ -139,16 +139,38 @@ export const createLinkToken = action({
     const { env } = plaidConfig();
     const useOAuthRedirect =
       redirectUri && env !== 'sandbox' && redirectUri.startsWith('https://');
-    const res = await plaidFetch('/link/token/create', {
+    const body = {
       client_name: 'NestWise',
       // Scope Plaid's user to our user so re-links map to the same Plaid user.
       user: { client_user_id: userId },
       products: ['transactions'],
       country_codes: plaidCountryCodes(),
       language: 'en',
-      ...(useOAuthRedirect ? { redirect_uri: redirectUri } : {}),
-    });
-    return { linkToken: res.link_token as string };
+    };
+
+    if (!useOAuthRedirect) {
+      const res = await plaidFetch('/link/token/create', body);
+      return { linkToken: res.link_token as string, oauthUnavailable: false };
+    }
+
+    try {
+      const res = await plaidFetch('/link/token/create', {
+        ...body,
+        redirect_uri: redirectUri,
+      });
+      return { linkToken: res.link_token as string, oauthUnavailable: false };
+    } catch (e) {
+      // Plaid rejects the ENTIRE call when the redirect URI isn't registered
+      // for this client — so an unregistered domain (a new custom domain, a
+      // preview deployment) kills bank linking outright rather than just
+      // breaking OAuth. Retry without it: banks that hand off to a browser
+      // login can't come back to an unregistered domain, but every other bank
+      // still links. The flag lets the UI say so instead of failing silently.
+      const msg = e instanceof Error ? e.message : String(e);
+      if (!/redirect[ _]uri/i.test(msg)) throw e;
+      const res = await plaidFetch('/link/token/create', body);
+      return { linkToken: res.link_token as string, oauthUnavailable: true };
+    }
   },
 });
 

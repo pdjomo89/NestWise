@@ -359,76 +359,122 @@ body {
   text-transform: capitalize;
 }
 
-/* Spending trends: one row per category, mini month bars + a delta badge. */
-.trend-table {
+/* Spending trends: grouped bars — one group per month, one bar per category,
+   all sharing a single y-scale so heights are comparable across the chart. */
+.grouped-chart {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.grouped-yaxis {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-}
-.trend-row {
-  display: grid;
-  grid-template-columns: 96px 1fr 68px 92px;
-  align-items: center;
-  gap: 12px;
-  padding: 6px 4px;
-  border-radius: 8px;
-}
-.trend-row:not(.trend-head):hover {
-  background: var(--panel-2);
-}
-.trend-head {
+  justify-content: space-between;
+  height: 200px;
+  font-size: 10px;
   color: var(--muted);
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  min-width: 34px;
+  /* Nudge each label onto its gridline rather than below it. */
+  margin-top: -0.5em;
+  padding-bottom: 18px;
 }
-.trend-cat {
-  font-size: 13px;
-  font-weight: 600;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.grouped-plot {
+  position: relative;
+  flex: 1;
+  min-width: 0;
 }
-.trend-bars {
+.grouped-grid {
+  position: absolute;
+  inset: 0 0 18px 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  pointer-events: none;
+}
+.grouped-gridline {
+  height: 1px;
+  background: var(--border);
+  opacity: 0.55;
+}
+.grouped-months {
+  position: relative;
+  display: flex;
+  gap: 10px;
+  height: 200px;
+}
+.grouped-month {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.grouped-bars {
+  flex: 1;
   display: flex;
   align-items: flex-end;
-  gap: 4px;
-  height: 34px;
+  justify-content: center;
+  /* 2px of surface between neighbouring fills keeps adjacent hues readable. */
+  gap: 2px;
 }
-.trend-head .trend-bars {
-  height: auto;
-  align-items: center;
-}
-.trend-month {
+.grouped-bar {
   flex: 1;
+  max-width: 14px;
+  border-radius: 4px 4px 0 0;
+  transition: height 0.3s ease;
+}
+.grouped-bar:hover {
+  outline: 2px solid var(--text);
+  outline-offset: 1px;
+}
+.grouped-month-label {
+  height: 18px;
+  line-height: 18px;
   text-align: center;
   font-size: 10px;
   color: var(--muted);
 }
-.trend-bar-cell {
-  flex: 1;
-  height: 100%;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
+
+/* Legend doubles as the table view: swatch + name + latest + delta. */
+.grouped-legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 2px 18px;
 }
-.trend-bar {
-  width: 70%;
-  max-width: 22px;
-  min-height: 2px;
-  border-radius: 3px 3px 0 0;
-  transition: height 0.3s ease;
-}
-.trend-latest {
-  text-align: right;
+.grouped-legend li {
+  display: grid;
+  grid-template-columns: 10px 1fr auto auto;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px;
+  border-radius: 6px;
   font-size: 13px;
+}
+.grouped-legend li:hover { background: var(--panel-2); }
+.legend-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+.legend-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.legend-latest {
   font-variant-numeric: tabular-nums;
+  text-align: right;
 }
 .trend-delta {
   text-align: right;
   font-size: 12px;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+  min-width: 62px;
 }
 .badge-up { color: #f87171; }
 .badge-down { color: #4ade80; }
@@ -475,7 +521,10 @@ body {
   white-space: nowrap;
 }
 @media (max-width: 720px) {
-  .trend-row { grid-template-columns: 72px 1fr 60px 78px; gap: 8px; }
+  /* Tighter groups so six months still fit without the bars vanishing. */
+  .grouped-months { gap: 5px; height: 170px; }
+  .grouped-bar { max-width: 9px; }
+  .grouped-yaxis { height: 170px; }
 }
 
 .txn-form, .planner-form {
