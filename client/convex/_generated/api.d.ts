@@ -11,6 +11,7 @@
 import type * as accounts from "../accounts.js";
 import type * as auth from "../auth.js";
 import type * as budget from "../budget.js";
+import type * as coach from "../coach.js";
 import type * as frequency from "../frequency.js";
 import type * as http from "../http.js";
 import type * as income from "../income.js";
@@ -21,6 +22,7 @@ import type * as preferences from "../preferences.js";
 import type * as recurring from "../recurring.js";
 import type * as retirement from "../retirement.js";
 import type * as seed from "../seed.js";
+import type * as stripe from "../stripe.js";
 import type * as summary from "../summary.js";
 import type * as transactions from "../transactions.js";
 import type * as trends from "../trends.js";
@@ -36,6 +38,7 @@ declare const fullApi: ApiFromModules<{
   accounts: typeof accounts;
   auth: typeof auth;
   budget: typeof budget;
+  coach: typeof coach;
   frequency: typeof frequency;
   http: typeof http;
   income: typeof income;
@@ -46,6 +49,7 @@ declare const fullApi: ApiFromModules<{
   recurring: typeof recurring;
   retirement: typeof retirement;
   seed: typeof seed;
+  stripe: typeof stripe;
   summary: typeof summary;
   transactions: typeof transactions;
   trends: typeof trends;

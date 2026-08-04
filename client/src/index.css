@@ -159,6 +159,10 @@ body {
   width: auto;
   min-width: 220px;
 }
+.settings-input {
+  width: auto;
+  min-width: 180px;
+}
 .btn-danger {
   background: var(--red);
   border: 0;
@@ -807,6 +811,13 @@ button[disabled] { opacity: 0.6; cursor: default; }
   flex: 1;
   font-weight: 500;
 }
+.src-kind-icon {
+  margin-right: 6px;
+}
+.src-note {
+  font-weight: 400;
+  font-size: 13px;
+}
 .src-detail {
   font-size: 13px;
 }
@@ -824,15 +835,27 @@ button[disabled] { opacity: 0.6; cursor: default; }
   color: var(--muted);
   letter-spacing: 0.04em;
 }
-.src-edit {
-  display: grid;
-  grid-template-columns: 1fr 1.4fr 1fr 1.2fr auto;
-  gap: 10px;
-  align-items: center;
+/* The income add form carries one control more than the others (type of
+   income), so it lays out in six columns instead of five. */
+.row-form.income-form {
+  grid-template-columns: 0.85fr 1.6fr 1.1fr 0.85fr 1fr auto;
+}
+@media (max-width: 720px) {
+  .row-form.income-form {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+/* Edit rows (`.src-edit`) inherit their layout from `.srclist li` — a flex row
+   where every control is `width: 100%` and shrinks to fit. The type picker holds
+   the longest text in the row, so keep it from collapsing to just its icon. */
+.src-edit .src-kind-select {
+  min-width: 170px;
 }
 @media (max-width: 720px) {
   .src-edit {
-    grid-template-columns: 1fr 1fr;
+    /* Too many controls for one line on a phone — let them wrap rather than
+       squeeze each one down to a couple of characters. */
+    flex-wrap: wrap;
   }
 }
 .edit-actions {
@@ -889,6 +912,35 @@ button[disabled] { opacity: 0.6; cursor: default; }
 .auth-card h2 {
   margin: 0 0 16px;
 }
+/* Dashboard greeting — the signed-in counterpart to `.auth-heading`. */
+.dash-greeting {
+  margin-bottom: 4px;
+}
+.dash-greeting h2 {
+  margin: 0 0 2px;
+  font-size: 22px;
+}
+.dash-greeting p {
+  margin: 0;
+}
+
+/* Greeting block above the form — shown to everyone who opens the app. */
+.auth-heading {
+  margin-bottom: 18px;
+}
+.auth-heading h2 {
+  margin: 0 0 6px;
+}
+.auth-greeting {
+  margin: 0 0 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--brand-green);
+}
+.auth-welcome {
+  margin: 0;
+  line-height: 1.5;
+}
 .auth-form {
   display: flex;
   flex-direction: column;
@@ -935,4 +987,264 @@ button[disabled] { opacity: 0.6; cursor: default; }
 .auth-fineprint {
   margin-top: 16px;
   font-size: 11px;
+}
+
+/* --- Coach ---------------------------------------------------------------- */
+.coach-hero {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+.coach-hero-text {
+  flex: 1;
+  min-width: 240px;
+}
+.coach-hero h2 {
+  margin: 0 0 4px;
+}
+.score-ring {
+  width: 128px;
+  height: 128px;
+  flex: none;
+}
+.score-num {
+  fill: var(--text);
+  font-size: 34px;
+  font-weight: 700;
+}
+.score-grade {
+  fill: var(--muted);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+}
+.coach-band {
+  margin: 0 0 6px;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--brand-green);
+}
+.coach-band.pending { color: var(--muted); }
+.coach-delta {
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.coach-delta.up { color: var(--green); }
+.coach-delta.down { color: var(--red); }
+
+.move-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.move {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  background: var(--panel-2);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+.move-rank {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--brand-green);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.move-body { flex: 1; }
+.move-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+.move-points {
+  flex: none;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--brand-green);
+  background: color-mix(in srgb, var(--brand-green) 16%, transparent);
+  border-radius: 999px;
+  padding: 2px 8px;
+}
+.move-body p {
+  margin: 6px 0 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.move-body .link-btn {
+  margin-top: 6px;
+  font-size: 13px;
+}
+
+.pillar-list {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.pillar-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+.pillar-label { font-weight: 600; }
+.pillar-score {
+  font-size: 13px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.pillar-track {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--panel-2);
+  overflow: hidden;
+}
+.pillar-bar {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--slate);
+  transition: width 0.35s ease;
+}
+.pillar.good .pillar-bar { background: var(--green); }
+.pillar.attention .pillar-bar { background: var(--brand-gold); }
+.pillar.urgent .pillar-bar { background: var(--red); }
+.pillar.unknown .pillar-bar { background: var(--border); }
+.pillar-headline {
+  margin: 8px 0 2px;
+  font-size: 14px;
+}
+.pillar.unknown .pillar-headline { color: var(--muted); }
+
+.coach-spark {
+  width: 100%;
+  height: 120px;
+  display: block;
+  margin: 4px 0 8px;
+}
+
+/* Billing (Settings → NestWise Pro) */
+.pro-features {
+  margin: 10px 0 16px;
+  padding-left: 20px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.7;
+}
+.plan-picker {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.plan-option {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-start;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--panel-2);
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+}
+.plan-option:hover:not(:disabled) {
+  border-color: var(--brand-green);
+}
+.plan-option:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.plan-option-name {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+.plan-option-price {
+  font-size: 22px;
+  font-weight: 700;
+}
+.plan-option-interval {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted);
+}
+.plan-option-note {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--brand-green);
+}
+.plan-option-badge {
+  margin-left: 8px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--brand-gold);
+  color: #1f2937;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.plan-option-trial {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--brand-green);
+}
+.plan-option-then {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+/* Post-signup welcome step */
+.welcome-card {
+  width: 100%;
+  max-width: 620px;
+  text-align: center;
+}
+.welcome-brand {
+  justify-content: center;
+  margin-bottom: 4px;
+}
+.welcome-lead {
+  margin: -4px 0 18px;
+  font-size: 14px;
+}
+.welcome-card .plan-picker {
+  margin-bottom: 8px;
+  text-align: left;
+}
+.welcome-skip {
+  margin-top: 6px;
+  font-size: 14px;
+}
+/* The centred welcome card drops the panel's left accent bar, which would
+   otherwise float detached at the far edge of a centred heading. */
+.welcome-card h2 {
+  padding-left: 0;
+  border-left: 0;
+}
+/* Not a destructive action, so don't inherit link-btn's red hover. */
+.welcome-skip:hover {
+  color: var(--text);
 }

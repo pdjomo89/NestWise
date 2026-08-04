@@ -3,6 +3,7 @@ import { useMutation, useQuery } from 'convex/react';
 import { useAuthActions } from '@convex-dev/auth/react';
 import { api } from '../../convex/_generated/api';
 import { useCurrency, useLang, useTheme, CURRENCIES } from '../prefs';
+import Billing from './Billing';
 
 export default function Settings() {
   const { t, lang, setLang } = useLang();
@@ -11,8 +12,18 @@ export default function Settings() {
   const { signOut } = useAuthActions();
   const user = useQuery(api.users.current);
   const resetToSample = useMutation(api.seed.resetToSample);
+  const setUserName = useMutation(api.users.setName);
   const [confirming, setConfirming] = useState(false);
   const [done, setDone] = useState(false);
+  // null = untouched, so the field follows the stored name (including changes
+  // made on another device). Typing takes over until the save lands.
+  const [nameDraft, setNameDraft] = useState<string | null>(null);
+  const [savingName, setSavingName] = useState(false);
+  const [nameSaved, setNameSaved] = useState(false);
+
+  const storedName = user?.name ?? '';
+  const nameValue = nameDraft ?? storedName;
+  const nameDirty = nameDraft !== null && nameDraft.trim() !== storedName;
 
   async function reset() {
     await resetToSample({});
@@ -20,8 +31,22 @@ export default function Settings() {
     setDone(true);
   }
 
+  async function saveName(e: React.FormEvent) {
+    e.preventDefault();
+    if (!nameDirty) return;
+    setSavingName(true);
+    await setUserName({ name: nameValue });
+    // Hand the field back to the server value — it now matches what was typed.
+    setNameDraft(null);
+    setSavingName(false);
+    setNameSaved(true);
+  }
+
   return (
     <div className="grid">
+      {/* Renders nothing until Stripe is configured for this deployment. */}
+      <Billing />
+
       <section className="panel settings">
         <h2>{t('Settings')}</h2>
 
@@ -118,7 +143,32 @@ export default function Settings() {
 
       <section className="panel settings">
         <h2>{t('Account')}</h2>
+
         <div className="settings-row">
+          <span className="settings-label">{t('Display name')}</span>
+          <form className="row-actions" onSubmit={saveName}>
+            <input
+              className="settings-input"
+              value={nameValue}
+              maxLength={40}
+              placeholder={t('e.g. Ada')}
+              onChange={(e) => {
+                setNameSaved(false);
+                setNameDraft(e.target.value);
+              }}
+            />
+            <button type="submit" disabled={!nameDirty || savingName}>
+              {savingName ? t('Working…') : t('Save')}
+            </button>
+          </form>
+        </div>
+        <p className="muted small">
+          {nameSaved
+            ? t('Saved.')
+            : t('Used to greet you on the dashboard. Leave it blank to go by your email.')}
+        </p>
+
+        <div className="settings-row" style={{ marginTop: 16 }}>
           <span className="settings-label">
             {user?.email ? user.email : t('Signed in')}
           </span>

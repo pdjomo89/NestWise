@@ -22,8 +22,9 @@ const planFields = {
 };
 
 // Core monthly-compounding projection for a single plan. Shared by the
-// single-plan query and the household roll-up so the math stays in one place.
-function project(args: PlanInput) {
+// single-plan query, the household roll-up and the coach's retirement pillar so
+// the math stays in one place.
+export function project(args: PlanInput) {
   const {
     currentAge,
     retirementAge,

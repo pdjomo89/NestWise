@@ -6,6 +6,7 @@ import { niceTicks } from '../chart';
 import { colorFor, capitalize } from '../categories';
 import { ACCOUNT_TYPE_LABEL } from '../accountTypes';
 import { useLang } from '../prefs';
+import { timeGreeting, displayName } from '../greeting';
 import SpendingTrends from './SpendingTrends';
 
 // Maps the budget status to a status key (translated at render) and an icon.
@@ -15,6 +16,35 @@ const STATUS_META: Record<string, { label: string; icon: string }> = {
   shortfall: { label: 'Shortfall', icon: '🔴' },
   setup: { label: 'Set up your budget', icon: '🪺' },
 };
+
+// The signed-in counterpart to the sign-in screen's greeting: someone with a
+// live session never sees that page, so they get welcomed here instead.
+function Greeting() {
+  const { t, lang } = useLang();
+  const user = useQuery(api.users.current);
+  // The name they set in Settings wins; otherwise fall back to one derived from
+  // their email. Undefined while the query is in flight — render the greeting
+  // anyway rather than popping the name in a frame later and shifting the page.
+  const name = user === undefined ? null : user?.name?.trim() || displayName(user?.email);
+
+  const today = new Date().toLocaleDateString(lang === 'fr' ? 'fr-FR' : 'en-US', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+  });
+
+  return (
+    <section className="dash-greeting">
+      <h2>
+        {timeGreeting(t)}
+        {name ? `, ${name}` : ''} 👋
+      </h2>
+      <p className="muted small">
+        {today} · {t('here’s where your money stands today.')}
+      </p>
+    </section>
+  );
+}
 
 export default function Dashboard({
   summary,
@@ -35,6 +65,7 @@ export default function Dashboard({
 
   return (
     <div className="grid">
+      <Greeting />
       {budget && <SurplusPanel budget={budget} />}
 
       <section className="cards">

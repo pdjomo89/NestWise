@@ -3,6 +3,7 @@ import { usePlaidLink } from 'react-plaid-link';
 import { useAction, useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { useLang, useDateRange } from '../prefs';
+import { errorMessage } from '../errors';
 
 // Where Plaid sends the browser back after an OAuth bank login. Must match an
 // "Allowed redirect URI" registered in the Plaid dashboard (production/Trial).
@@ -16,18 +17,6 @@ const TOKEN_KEY = 'plaid_link_token';
 // True when the current page load is Plaid returning from an OAuth bank login.
 const oauthStateId = () =>
   new URLSearchParams(window.location.search).get('oauth_state_id');
-
-function errorMessage(e: unknown): string {
-  let msg = e instanceof Error ? e.message : String(e);
-  // Convex wraps server errors like "[CONVEX ...] Server Error Uncaught
-  // Error: <real message> at <stack>". Pull out just the real message.
-  const u = msg.lastIndexOf('Uncaught ');
-  if (u >= 0) msg = msg.slice(u + 'Uncaught '.length);
-  msg = msg.replace(/^(?:Convex)?Error:\s*/i, '');
-  // Strip any inlined stack frames ("... at handler (file:line)").
-  msg = msg.split(/\s+at\s+\S/)[0];
-  return msg.trim();
-}
 
 export default function ConnectBank() {
   const { t } = useLang();

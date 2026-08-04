@@ -5,6 +5,12 @@ import { FREQUENCIES, FREQUENCY_LABEL, toMonthly, Frequency } from '../../convex
 import { Budget as BudgetData, IncomeSource, Person, RecurringExpense, Id } from '../types';
 import { usd } from '../format';
 import { colorFor, capitalize } from '../categories';
+import {
+  INCOME_TYPES,
+  INCOME_TYPE_LABEL,
+  DEFAULT_INCOME_TYPE,
+  incomeTypeIcon,
+} from '../incomeTypes';
 import { useLang } from '../prefs';
 
 const EXPENSE_CATEGORIES = [
@@ -149,16 +155,19 @@ function IncomeSources({ people, sources }: { people: Person[]; sources: IncomeS
   const removeIncome = useMutation(api.income.remove);
 
   const [personId, setPersonId] = useState('');
+  const [kind, setKind] = useState<string>(DEFAULT_INCOME_TYPE);
   const [label, setLabel] = useState('');
   const [amount, setAmount] = useState('');
   const [frequency, setFrequency] = useState<Frequency>('monthly');
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!label || isNaN(Number(amount))) return;
+    if (isNaN(Number(amount))) return;
     addIncome({
       personId: personId ? (personId as Id<'people'>) : undefined,
-      label,
+      // The kind names it; the label is only the optional specifics.
+      label: label.trim(),
+      kind,
       amount: Number(amount),
       frequency,
     });
@@ -169,7 +178,7 @@ function IncomeSources({ people, sources }: { people: Person[]; sources: IncomeS
   return (
     <section className="panel">
       <h2>{t('Income sources')}</h2>
-      <form className="row-form" onSubmit={submit}>
+      <form className="row-form income-form" onSubmit={submit}>
         <select value={personId} onChange={(e) => setPersonId(e.target.value)}>
           <option value="">{t('Unassigned')}</option>
           {people.map((p) => (
@@ -178,7 +187,23 @@ function IncomeSources({ people, sources }: { people: Person[]; sources: IncomeS
             </option>
           ))}
         </select>
-        <input placeholder={t('Label (e.g. Salary)')} value={label} onChange={(e) => setLabel(e.target.value)} required />
+        <select
+          className="src-kind-select"
+          value={kind}
+          onChange={(e) => setKind(e.target.value)}
+          title={t('Type of income')}
+        >
+          {INCOME_TYPES.map((k) => (
+            <option key={k.value} value={k.value}>
+              {k.icon} {t(k.label)}
+            </option>
+          ))}
+        </select>
+        <input
+          placeholder={t('Detail (optional)')}
+          value={label}
+          onChange={(e) => setLabel(e.target.value)}
+        />
         <input
           type="number"
           step="0.01"
@@ -225,6 +250,7 @@ function IncomeRow({
     id: Id<'incomeSources'>;
     personId?: Id<'people'>;
     label: string;
+    kind?: string;
     amount: number;
     frequency: Frequency;
   }) => void;
@@ -232,6 +258,7 @@ function IncomeRow({
 }) {
   const [editing, setEditing] = useState(false);
   const [personId, setPersonId] = useState<string>(source.personId ?? '');
+  const [kind, setKind] = useState<string>(source.kind ?? DEFAULT_INCOME_TYPE);
   const [label, setLabel] = useState(source.label);
   const [amount, setAmount] = useState(String(source.amount));
   const [frequency, setFrequency] = useState<Frequency>(source.frequency);
@@ -243,17 +270,19 @@ function IncomeRow({
 
   function startEdit() {
     setPersonId(source.personId ?? '');
+    setKind(source.kind ?? DEFAULT_INCOME_TYPE);
     setLabel(source.label);
     setAmount(String(source.amount));
     setFrequency(source.frequency);
     setEditing(true);
   }
   function save() {
-    if (!label || isNaN(Number(amount))) return;
+    if (isNaN(Number(amount))) return;
     onUpdate({
       id: source._id,
       personId: personId ? (personId as Id<'people'>) : undefined,
-      label,
+      label: label.trim(),
+      kind,
       amount: Number(amount),
       frequency,
     });
@@ -271,7 +300,23 @@ function IncomeRow({
             </option>
           ))}
         </select>
-        <input value={label} onChange={(e) => setLabel(e.target.value)} />
+        <select
+          className="src-kind-select"
+          value={kind}
+          onChange={(e) => setKind(e.target.value)}
+          title={t('Type of income')}
+        >
+          {INCOME_TYPES.map((k) => (
+            <option key={k.value} value={k.value}>
+              {k.icon} {t(k.label)}
+            </option>
+          ))}
+        </select>
+        <input
+          value={label}
+          placeholder={t('Detail (optional)')}
+          onChange={(e) => setLabel(e.target.value)}
+        />
         <input type="number" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} />
         <select value={frequency} onChange={(e) => setFrequency(e.target.value as Frequency)}>
           {FREQUENCIES.map((f) => (
@@ -296,7 +341,19 @@ function IncomeRow({
     <li>
       <span className="dot" style={{ background: ownerColor }} />
       <span className="src-owner">{ownerName}</span>
-      <span className="src-label">{source.label}</span>
+      <span className="src-label">
+        {/* Rows added before the type picker have only a label — show that on
+            its own rather than inventing a kind for them. */}
+        {source.kind ? (
+          <>
+            <span className="src-kind-icon">{incomeTypeIcon(source.kind)}</span>
+            {t(INCOME_TYPE_LABEL[source.kind] ?? source.kind)}
+            {source.label && <span className="src-note muted"> · {source.label}</span>}
+          </>
+        ) : (
+          source.label
+        )}
+      </span>
       <span className="src-detail muted">
         {usd(source.amount)} · {t(FREQUENCY_LABEL[source.frequency])}
       </span>

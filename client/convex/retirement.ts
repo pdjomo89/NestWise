@@ -1,6 +1,11 @@
 import { query, mutation } from './_generated/server';
 import { v } from 'convex/values';
 import { getUserId, requireUserId } from './auth';
+import { isProUser } from './stripe';
+
+// How many retirement plans a free account can keep. Pro lifts the cap so a
+// couple can model one plan each (and run side-by-side scenarios).
+const FREE_PLAN_LIMIT = 1;
 
 // Plans are one row per scenario (e.g. one per spouse) holding the assumptions
 // plus the (optional) current savings and monthly contribution. When those two
@@ -38,6 +43,17 @@ export const savePlan = mutation({
       if (!existing || existing.userId !== userId) throw new Error('Plan not found');
       await ctx.db.patch(id, fields);
       return id;
+    }
+    // Editing an existing plan is always allowed — only *adding* beyond the
+    // free cap needs Pro, so a lapsed subscriber never loses saved plans.
+    const existing = await ctx.db
+      .query('retirementPlan')
+      .withIndex('by_user', (q) => q.eq('userId', userId))
+      .collect();
+    if (existing.length >= FREE_PLAN_LIMIT && !(await isProUser(ctx, userId))) {
+      throw new Error(
+        'Multiple retirement plans are a NestWise Pro feature. Upgrade in Settings to plan for your whole household.'
+      );
     }
     return ctx.db.insert('retirementPlan', { userId, ...fields });
   },

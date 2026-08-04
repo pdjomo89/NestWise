@@ -27,6 +27,7 @@ export const add = mutation({
   args: {
     personId: v.optional(v.id('people')),
     label: v.string(),
+    kind: v.optional(v.string()),
     amount: v.number(),
     frequency,
   },
@@ -41,12 +42,13 @@ export const update = mutation({
     id: v.id('incomeSources'),
     personId: v.optional(v.id('people')),
     label: v.string(),
+    kind: v.optional(v.string()),
     amount: v.number(),
     frequency,
   },
-  handler: async (ctx, { id, personId, label, amount, frequency }) => {
+  handler: async (ctx, { id, personId, label, kind, amount, frequency }) => {
     await getOwned(ctx, id);
-    await ctx.db.patch(id, { personId, label, amount, frequency });
+    await ctx.db.patch(id, { personId, label, kind, amount, frequency });
   },
 });
 

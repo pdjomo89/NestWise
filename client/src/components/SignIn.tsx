@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useAuthActions } from '@convex-dev/auth/react';
 import { useLang } from '../prefs';
+import { clearWelcome, markNewSignUp } from '../onboarding';
+import { timeGreeting } from '../greeting';
 
 // Turn Convex Auth's raw errors into something friendly. The server returns
 // "InvalidSecret" / "InvalidAccountId" style messages for bad credentials.
@@ -35,9 +37,15 @@ export default function SignIn() {
     }
     setBusy(true);
     try {
+      // Flag it before signing in: the provider flips to authenticated straight
+      // away, and App reads this on its first authenticated render.
+      if (isSignUp) markNewSignUp();
       await signIn('password', { email, password, flow });
       // On success ConvexAuthProvider flips to authenticated and App swaps in.
     } catch (err) {
+      // The account wasn't created, so don't leave the welcome step armed for
+      // whoever signs in on this browser next.
+      clearWelcome();
       setError(friendlyError(err, flow, t));
       setBusy(false);
     }
@@ -57,7 +65,15 @@ export default function SignIn() {
           {t('Track finances · plan retirement · save smarter')}
         </p>
 
-        <h2>{isSignUp ? t('Create your account') : t('Welcome back')}</h2>
+        <div className="auth-heading">
+          <p className="auth-greeting">{timeGreeting(t)} 👋</p>
+          <h2>{isSignUp ? t('Create your account') : t('Welcome back')}</h2>
+          <p className="muted small auth-welcome">
+            {isSignUp
+              ? t('Welcome to NestWise — a few details and your money gets a lot clearer.')
+              : t('Good to see you again. Everything is right where you left it.')}
+          </p>
+        </div>
 
         <form className="auth-form" onSubmit={submit}>
           <label className="auth-label">

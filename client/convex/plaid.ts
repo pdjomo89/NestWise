@@ -127,13 +127,18 @@ function mapAccountTypeAndBalance(plaidType: string, subtype: string | null, cur
 //
 // `redirectUri` is the app URL Plaid sends the browser back to after an OAuth
 // bank login (most major US banks). It must EXACTLY match an "Allowed redirect
-// URI" registered in the Plaid dashboard. We only attach it outside sandbox.
+// URI" registered in the Plaid dashboard. We only attach it outside sandbox,
+// and only over HTTPS — Plaid rejects the whole /link/token/create call with
+// "redirect_uri must use HTTPS" otherwise, which would block linking entirely
+// on a plain-http dev server. Dropping it there costs only OAuth banks (which
+// can't redirect back to http anyway); every other bank still links.
 export const createLinkToken = action({
   args: { redirectUri: v.optional(v.string()) },
   handler: async (ctx, { redirectUri }) => {
     const userId = await requireUserId(ctx);
     const { env } = plaidConfig();
-    const useOAuthRedirect = redirectUri && env !== 'sandbox';
+    const useOAuthRedirect =
+      redirectUri && env !== 'sandbox' && redirectUri.startsWith('https://');
     const res = await plaidFetch('/link/token/create', {
       client_name: 'NestWise',
       // Scope Plaid's user to our user so re-links map to the same Plaid user.

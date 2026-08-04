@@ -33,6 +33,28 @@ const FR: Record<string, string> = {
   Budget: 'Budget',
   Retirement: 'Retraite',
   Advice: 'Conseils',
+  Coach: 'Coach',
+  // Coach tab
+  'Your financial coach': 'Votre coach financier',
+  'Add your income, accounts and bills and the coach will grade where you stand, then tell you the single highest-impact move to make next.':
+    'Ajoutez vos revenus, comptes et factures : le coach évaluera votre situation et vous indiquera l’action la plus utile à faire ensuite.',
+  'Add accounts': 'Ajouter des comptes',
+  'Financial health': 'Santé financière',
+  since: 'depuis le',
+  'Graded on cash flow, emergency fund, debt, retirement and spending discipline — weighted by how much each one moves your future.':
+    'Évalué sur la trésorerie, le fonds d’urgence, la dette, la retraite et la discipline de dépenses — pondéré selon l’impact de chacun sur votre avenir.',
+  'areas tracked. Your score appears once the coach can see enough of the picture — the moves below are what it needs.':
+    'domaines suivis. Votre score apparaîtra dès que le coach en verra assez — les actions ci-dessous sont ce qu’il lui manque.',
+  'Your next moves': 'Vos prochaines actions',
+  'Ranked by how many points each would win back.':
+    'Classées selon le nombre de points que chacune rapporterait.',
+  'Go to': 'Aller à',
+  'Where you stand': 'Où vous en êtes',
+  'not tracked': 'non suivi',
+  'Areas we can’t measure yet are left out of the score rather than counted as zero.':
+    'Les domaines encore impossibles à mesurer sont exclus du score plutôt que comptés comme zéro.',
+  'Your progress': 'Votre progression',
+  points: 'points',
   // Common
   Add: 'Ajouter',
   'Adding…': 'Ajout…',
@@ -108,6 +130,19 @@ const FR: Record<string, string> = {
   'Add a partner…': 'Ajouter un partenaire…',
   'Income sources': 'Sources de revenu',
   'Label (e.g. Salary)': 'Libellé (ex. Salaire)',
+  // Types of income (the picker on an income source)
+  'Type of income': 'Type de revenu',
+  'Detail (optional)': 'Détail (facultatif)',
+  Salary: 'Salaire',
+  'Hourly wages': 'Salaire horaire',
+  'Bonus / commission': 'Prime / commission',
+  'Self-employed / freelance': 'Indépendant / freelance',
+  'Business income': 'Revenu d’entreprise',
+  'Rental income': 'Revenu locatif',
+  'Investments / dividends': 'Placements / dividendes',
+  'Pension / retirement': 'Pension / retraite',
+  'Benefits / support': 'Prestations / aides',
+  'Other income': 'Autre revenu',
   Unassigned: 'Non attribué',
   'No income sources yet.': 'Aucune source de revenu.',
   'Recurring expenses': 'Dépenses récurrentes',
@@ -231,6 +266,91 @@ const FR: Record<string, string> = {
   'Preferences sync across your devices.':
     'Les préférences se synchronisent sur tous vos appareils.',
   'Back to app': 'Retour à l’application',
+  Account: 'Compte',
+  'Display name': 'Nom affiché',
+  'e.g. Ada': 'ex. Ada',
+  'Used to greet you on the dashboard. Leave it blank to go by your email.':
+    'Sert à vous accueillir sur le tableau de bord. Laissez vide pour utiliser votre e-mail.',
+  'Saved.': 'Enregistré.',
+  'Signed in': 'Connecté',
+  'Sign out': 'Se déconnecter',
+  // Billing / NestWise Pro
+  'NestWise Pro': 'NestWise Pro',
+  Pro: 'Pro',
+  'Upgrade to unlock the parts of NestWise that do the work for you.':
+    'Passez à Pro pour débloquer les fonctions qui travaillent pour vous.',
+  'Link your banks and import transactions automatically':
+    'Reliez vos banques et importez vos transactions automatiquement',
+  'Keep a retirement plan for every person in your household':
+    'Gardez un plan de retraite pour chaque personne du foyer',
+  'Everything else in NestWise, forever': 'Tout le reste de NestWise, pour toujours',
+  'Monthly plan': 'Forfait mensuel',
+  'Annual plan': 'Forfait annuel',
+  Annual: 'Annuel',
+  Subscribe: 'S’abonner',
+  // Greetings (sign-in screen + dashboard)
+  'here’s where your money stands today.': 'voici où en sont vos finances aujourd’hui.',
+  'Good morning': 'Bonjour',
+  'Good afternoon': 'Bon après-midi',
+  'Good evening': 'Bonsoir',
+  'Welcome back': 'Content de vous revoir',
+  'Create your account': 'Créez votre compte',
+  'Welcome to NestWise — a few details and your money gets a lot clearer.':
+    'Bienvenue sur NestWise — quelques informations et vos finances deviennent bien plus claires.',
+  'Good to see you again. Everything is right where you left it.':
+    'Ravi de vous revoir. Tout est exactement là où vous l’avez laissé.',
+  // Welcome step (post sign-up)
+  'Welcome to NestWise': 'Bienvenue sur NestWise',
+  'Start with': 'Commencez avec',
+  'No charge until': 'Aucun prélèvement avant le',
+  'Unlock automatic bank sync and household retirement planning.':
+    'Débloquez la synchronisation bancaire automatique et la planification de retraite du ménage.',
+  'Maybe later': 'Plus tard',
+  'You can upgrade any time from Settings. Cancel during the trial and you pay nothing.':
+    'Vous pouvez passer à Pro à tout moment depuis les Paramètres. Résiliez pendant l’essai et vous ne payez rien.',
+  'You can upgrade any time from Settings.':
+    'Vous pouvez passer à Pro à tout moment depuis les Paramètres.',
+  // Free trial
+  Trial: 'Essai',
+  'Free trial': 'Essai gratuit',
+  'Start free trial': 'Commencer l’essai gratuit',
+  // Whole phrases, so the past participle agrees with the count.
+  'month free': 'mois offert',
+  'months free': 'mois offerts',
+  'days free': 'jours offerts',
+  then: 'puis',
+  'Free until': 'Gratuit jusqu’au',
+  'your first payment is taken then.': 'votre premier paiement sera prélevé à cette date.',
+  'You’re on a free trial.': 'Vous êtes en essai gratuit.',
+  'Your trial ends on': 'Votre essai se termine le',
+  'You won’t be charged.': 'Vous ne serez pas débité.',
+  'Your trial is ending and you won’t be charged.':
+    'Votre essai se termine et vous ne serez pas débité.',
+  'Payments are handled by Stripe. You won’t be charged until the trial ends, and cancelling before then costs nothing. Prices are shown in your local currency, with the payment methods common in your country.':
+    'Les paiements sont gérés par Stripe. Vous ne serez débité qu’à la fin de l’essai, et résilier avant ne coûte rien. Les prix s’affichent dans votre devise locale, avec les moyens de paiement courants dans votre pays.',
+  // Badge on the yearly card, e.g. "17% off". Not the `Save` key above — that
+  // one is the form button ("Enregistrer").
+  off: 'de réduction',
+  month: 'mois',
+  year: 'an',
+  'Manage billing': 'Gérer l’abonnement',
+  'Working…': 'En cours…',
+  'Renews on': 'Renouvellement le',
+  'Pro ends on': 'Pro se termine le',
+  'Pro ends at the end of this billing period.':
+    'Pro se termine à la fin de cette période de facturation.',
+  'Your subscription is active.': 'Votre abonnement est actif.',
+  'Your last payment failed. Update your card to keep Pro.':
+    'Votre dernier paiement a échoué. Mettez à jour votre carte pour conserver Pro.',
+  'Change your card, switch plans, download invoices or cancel in the billing portal.':
+    'Changez de carte, changez de forfait, téléchargez vos factures ou résiliez dans le portail de facturation.',
+  'Checkout cancelled — you have not been charged.':
+    'Paiement annulé — vous n’avez pas été débité.',
+  'You’re on NestWise Pro — thank you!': 'Vous êtes sur NestWise Pro — merci !',
+  'No plans are configured yet — add your Stripe price ids to finish setup.':
+    'Aucun forfait configuré — ajoutez vos identifiants de prix Stripe pour terminer la configuration.',
+  'Payments are handled by Stripe. You’ll see the price in your local currency and the payment methods common in your country. Cancel anytime.':
+    'Les paiements sont gérés par Stripe. Le prix s’affiche dans votre devise locale, avec les moyens de paiement courants dans votre pays. Résiliez à tout moment.',
 };
 
 const ThemeContext = createContext<{

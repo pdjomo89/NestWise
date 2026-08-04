@@ -75,6 +75,9 @@ export default defineSchema({
     userId: v.id('users'),
     personId: v.optional(v.id('people')),
     label: v.string(),
+    // What sort of income this is (salary, rental, pension, ... — see
+    // src/incomeTypes.ts). Optional: rows predating the picker have none.
+    kind: v.optional(v.string()),
     amount: v.number(),
     frequency,
   }).index('by_user', ['userId']),
@@ -104,6 +107,46 @@ export default defineSchema({
     currentSavings: v.optional(v.number()),
     monthlyContribution: v.optional(v.number()),
   }).index('by_user', ['userId']),
+
+  // Stripe billing state — at most one row per user, created the first time
+  // they open checkout. The row is the local mirror of the Stripe subscription;
+  // Stripe remains the source of truth and pushes changes via webhook (see
+  // http.ts). `status` holds the raw Stripe status string so a new status Stripe
+  // introduces later can't fail validation; `stripe.ts` decides which of them
+  // grant Pro access.
+  subscriptions: defineTable({
+    userId: v.id('users'),
+    stripeCustomerId: v.string(),
+    stripeSubscriptionId: v.optional(v.string()),
+    // active | trialing | past_due | canceled | incomplete | unpaid | paused
+    status: v.optional(v.string()),
+    priceId: v.optional(v.string()),
+    // The plan's base price, copied from the Stripe Price. With Adaptive
+    // Pricing the buyer is charged a converted amount in their own currency,
+    // so treat these as "list price" for display — the portal shows what was
+    // actually billed.
+    currency: v.optional(v.string()),
+    amount: v.optional(v.number()), // minor units of `currency` (e.g. cents)
+    interval: v.optional(v.string()), // month | year
+    currentPeriodEnd: v.optional(v.number()), // epoch ms
+    cancelAtPeriodEnd: v.optional(v.boolean()),
+    // When the free trial ends (epoch ms), i.e. when the first charge lands.
+    // Absent once the trial is over, so it can't be used to tell whether this
+    // user has *ever* trialled — `stripeSubscriptionId` is what guards that.
+    trialEnd: v.optional(v.number()),
+  })
+    .index('by_user', ['userId'])
+    .index('by_customer', ['stripeCustomerId']),
+
+  // One row per day the coach was viewed, so progress can be charted over time.
+  // Written by `coach.recordToday`, which recomputes the score server-side and
+  // overwrites the row for the current day.
+  coachSnapshots: defineTable({
+    userId: v.id('users'),
+    date: v.string(), // YYYY-MM-DD (UTC), matches budget.ts's month handling
+    score: v.number(), // 0-100 overall
+    pillars: v.array(v.object({ key: v.string(), score: v.number() })),
+  }).index('by_user_date', ['userId', 'date']),
 
   // UI preferences (one row per user) — persisted across devices.
   preferences: defineTable({

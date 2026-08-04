@@ -1,18 +1,22 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery, Authenticated, Unauthenticated, AuthLoading } from 'convex/react';
 import { api } from '../convex/_generated/api';
 import Dashboard from './components/Dashboard';
 import Transactions from './components/Transactions';
 import RetirementPlanner from './components/RetirementPlanner';
 import Advice from './components/Advice';
+import Coach from './components/Coach';
 import Budget from './components/Budget';
 import Accounts from './components/Accounts';
 import Settings from './components/Settings';
 import SignIn from './components/SignIn';
+import Welcome from './components/Welcome';
 import { useLang } from './prefs';
+import { clearWelcome, isNewSignUp } from './onboarding';
 
 type Tab =
   | 'dashboard'
+  | 'coach'
   | 'transactions'
   | 'accounts'
   | 'budget'
@@ -34,21 +38,59 @@ export default function App() {
         <SignIn />
       </Unauthenticated>
       <Authenticated>
-        <AppContent />
+        <AuthedRoot />
       </Authenticated>
     </>
   );
 }
 
+// Sits between the auth gate and the app proper. A brand-new account gets the
+// welcome/trial step first; everyone else goes straight to the dashboard.
+function AuthedRoot() {
+  const { t } = useLang();
+  const billing = useQuery(api.stripe.status);
+  const [welcome, setWelcome] = useState(isNewSignUp);
+
+  function dismiss() {
+    clearWelcome();
+    setWelcome(false);
+  }
+
+  // Nothing to offer — billing is dormant, or they subscribed on another
+  // device before this render. Drop the flag instead of showing a dead screen.
+  useEffect(() => {
+    if (welcome && billing !== undefined && (!billing.configured || billing.pro)) dismiss();
+  }, [welcome, billing]);
+
+  if (welcome) {
+    // Hold the splash rather than flashing the dashboard for the one frame
+    // before we know whether there's a trial to offer.
+    if (billing === undefined) {
+      return (
+        <div className="auth-screen">
+          <p className="muted">{t('Loading…')}</p>
+        </div>
+      );
+    }
+    if (billing.configured && !billing.pro) return <Welcome onDone={dismiss} />;
+  }
+
+  return <AppContent />;
+}
+
 function AppContent() {
-  // When Plaid redirects back from an OAuth bank login, the app reloads at the
-  // root with an `oauth_state_id` query param. Start on the Accounts tab so
-  // ConnectBank mounts and resumes the Link flow.
-  const [tab, setTab] = useState<Tab>(() =>
-    new URLSearchParams(window.location.search).has('oauth_state_id')
-      ? 'accounts'
-      : 'dashboard'
-  );
+  // Two third-party redirects land back on the root URL and need a specific
+  // tab mounted to pick the flow up:
+  //   ?oauth_state_id=…  Plaid returning from an OAuth bank login → Accounts,
+  //                      so ConnectBank resumes Link.
+  //   ?checkout=…        Stripe returning from Checkout or the billing portal →
+  //                      Settings, so Billing confirms the subscription.
+  const [tab, setTab] = useState<Tab>(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.has('oauth_state_id')) return 'accounts';
+    if (params.has('checkout')) return 'settings';
+    return 'dashboard';
+  });
   const { t, lang } = useLang();
 
   // Reactive queries — these update automatically whenever a mutation runs.
@@ -84,7 +126,7 @@ function AppContent() {
 
       <nav className="tabs">
         {(
-          ['dashboard', 'transactions', 'accounts', 'budget', 'retirement', 'advice'] as Tab[]
+          ['dashboard', 'coach', 'transactions', 'accounts', 'budget', 'retirement', 'advice'] as Tab[]
         ).map((tk) => (
           <button
             key={tk}
@@ -103,6 +145,7 @@ function AppContent() {
         {tab === 'transactions' && (
           <Transactions transactions={transactions ?? []} accounts={accounts ?? []} />
         )}
+        {tab === 'coach' && <Coach onNavigate={(next) => setTab(next as Tab)} />}
         {tab === 'accounts' && <Accounts accounts={accounts ?? []} />}
         {tab === 'settings' && <Settings />}
         {tab === 'budget' && <Budget />}
