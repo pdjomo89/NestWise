@@ -106,7 +106,39 @@ export default defineSchema({
     annualInflation: v.number(),
     currentSavings: v.optional(v.number()),
     monthlyContribution: v.optional(v.number()),
+    // Tax mix of the nest egg, as shares of 1 (the remainder is the taxable
+    // share). Defaulted from the user's own accounts and editable per plan;
+    // absent on rows saved before after-tax projection existed, which then
+    // report pre-tax figures exactly as they did before.
+    deferredShare: v.optional(v.number()),
+    freeShare: v.optional(v.number()),
+    marginalTaxRate: v.optional(v.number()), // expected rate in retirement
+    // Government benefits for this person, as monthly amounts in TODAY's
+    // dollars at age 65. Both are indexed, so today's dollars is the stable
+    // way to store them. Start ages carry the permanent early/late adjustment.
+    cppMonthly: v.optional(v.number()),
+    cppStartAge: v.optional(v.number()),
+    oasMonthly: v.optional(v.number()),
+    oasStartAge: v.optional(v.number()),
+    // Age the RRSP is converted to a RRIF. 71 is the legal deadline.
+    rrifConversionAge: v.optional(v.number()),
   }).index('by_user', ['userId']),
+
+  // Registered-plan contribution room, one row per plan per calendar year.
+  //
+  // `limit` is what the user tells us they have — real room includes years of
+  // carry-forward that only the CRA can total up, so this is seeded from the
+  // statutory annual limit and then edited from their Notice of Assessment.
+  // `used` is what they've put in so far this year.
+  contributionRoom: defineTable({
+    userId: v.id('users'),
+    kind: v.string(), // rrsp | tfsa | fhsa | resp | rdsp — see src/canada.ts
+    year: v.number(), // calendar year the room applies to
+    limit: v.number(),
+    used: v.number(),
+  })
+    .index('by_user', ['userId'])
+    .index('by_user_year', ['userId', 'year']),
 
   // Stripe billing state — at most one row per user, created the first time
   // they open checkout. The row is the local mirror of the Stripe subscription;
@@ -154,5 +186,10 @@ export default defineSchema({
     theme: v.union(v.literal('dark'), v.literal('light')),
     lang: v.union(v.literal('en'), v.literal('fr')),
     currency: v.optional(v.string()), // display currency code, e.g. USD/EUR
+    // Where the user files taxes. Decides which account types the pickers
+    // offer (RRSP/TFSA vs 401k/IRA) and which tax rules the retirement
+    // projection applies. Absent on rows predating the setting — the client
+    // then guesses from the browser locale and writes it back.
+    country: v.optional(v.union(v.literal('CA'), v.literal('US'))),
   }).index('by_user', ['userId']),
 });

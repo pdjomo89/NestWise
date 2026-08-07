@@ -3,7 +3,6 @@ import { useAction, useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { useLang } from '../prefs';
 import { errorMessage } from '../errors';
-import { clearWelcome } from '../onboarding';
 
 export type PlanKey = 'monthly' | 'annual';
 export type PlanInfo = {
@@ -89,8 +88,11 @@ export function usePlanPicker() {
   async function startCheckout(plan: PlanKey) {
     setError(null);
     setBusy(true);
-    // We're leaving the app; the welcome step has served its purpose either way.
-    clearWelcome();
+    // Deliberately does NOT clear the welcome flag. Leaving for Stripe is not
+    // the same as buying: abandoning Checkout used to burn the one-time offer
+    // and drop the user on the dashboard with no way back to it. The flag is
+    // cleared when the subscription actually lands (App, on ?checkout=success)
+    // or when the user explicitly picks "Maybe later".
     try {
       const { url } = await createCheckout({ plan, origin: window.location.origin });
       window.location.href = url;
@@ -115,6 +117,11 @@ export function usePlanPicker() {
 }
 
 // The monthly/annual cards themselves.
+//
+// Two modes. Left alone, each card is an action: clicking one leaves for
+// Stripe. Pass `selected` (a plan key or null) and they become a radio group
+// instead — used on the sign-up form, where the account doesn't exist yet and
+// checkout can't start until it does.
 export default function PlanCards({
   plans,
   busy,
@@ -122,6 +129,7 @@ export default function PlanCards({
   annualSavingPct,
   locale,
   onSelect,
+  selected,
 }: {
   plans: PlanInfo[];
   busy: boolean;
@@ -129,14 +137,18 @@ export default function PlanCards({
   annualSavingPct: number;
   locale: string;
   onSelect: (plan: PlanKey) => void;
+  selected?: PlanKey | null;
 }) {
   const { t } = useLang();
+  const picking = selected !== undefined;
   return (
     <div className="plan-picker">
       {plans.map((p) => (
         <button
           key={p.key}
-          className="plan-option"
+          type="button"
+          className={`plan-option${picking && selected === p.key ? ' selected' : ''}`}
+          aria-pressed={picking ? selected === p.key : undefined}
           onClick={() => onSelect(p.key)}
           disabled={busy}
         >
@@ -158,7 +170,15 @@ export default function PlanCards({
             </span>
           </span>
           <span className="plan-option-note">
-            {busy ? t('Working…') : trialLabel ? t('Start free trial') : t('Subscribe')}
+            {busy
+              ? t('Working…')
+              : picking
+              ? selected === p.key
+                ? `✓ ${t('Selected')}`
+                : t('Choose')
+              : trialLabel
+              ? t('Start free trial')
+              : t('Subscribe')}
           </span>
         </button>
       ))}

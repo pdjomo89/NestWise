@@ -35,6 +35,15 @@ export const savePlan = mutation({
     annualInflation: v.number(), // decimal, e.g. 0.025
     currentSavings: v.number(),
     monthlyContribution: v.number(),
+    // Optional so callers that don't model tax stay valid.
+    deferredShare: v.optional(v.number()),
+    freeShare: v.optional(v.number()),
+    marginalTaxRate: v.optional(v.number()),
+    cppMonthly: v.optional(v.number()),
+    cppStartAge: v.optional(v.number()),
+    oasMonthly: v.optional(v.number()),
+    oasStartAge: v.optional(v.number()),
+    rrifConversionAge: v.optional(v.number()),
   },
   handler: async (ctx, { id, ...fields }) => {
     const userId = await requireUserId(ctx);

@@ -2,13 +2,14 @@ import { useState } from 'react';
 import { useMutation, useQuery } from 'convex/react';
 import { useAuthActions } from '@convex-dev/auth/react';
 import { api } from '../../convex/_generated/api';
-import { useCurrency, useLang, useTheme, CURRENCIES } from '../prefs';
+import { useCountry, useCurrency, useLang, useTheme, CURRENCIES, COUNTRIES } from '../prefs';
 import Billing from './Billing';
 
 export default function Settings() {
   const { t, lang, setLang } = useLang();
   const { theme, setTheme } = useTheme();
   const { currency, setCurrency } = useCurrency();
+  const { country, setCountry } = useCountry();
   const { signOut } = useAuthActions();
   const user = useQuery(api.users.current);
   const resetToSample = useMutation(api.seed.resetToSample);
@@ -101,6 +102,26 @@ export default function Settings() {
           </select>
         </div>
         <p className="muted small">{t('Display only — amounts are not converted.')}</p>
+
+        <div className="settings-row">
+          <span className="settings-label">{t('Country')}</span>
+          <select
+            className="settings-select"
+            value={country}
+            onChange={(e) => setCountry(e.target.value as 'CA' | 'US')}
+          >
+            {COUNTRIES.map((c) => (
+              <option key={c.code} value={c.code}>
+                {t(c.label)}
+              </option>
+            ))}
+          </select>
+        </div>
+        <p className="muted small">
+          {t(
+            'Sets which account types you can add (RRSP, TFSA, FHSA… in Canada) and the tax rules the retirement projection uses.'
+          )}
+        </p>
 
         <p className="muted small" style={{ marginTop: 16 }}>
           {t('Preferences sync across your devices.')}

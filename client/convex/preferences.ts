@@ -4,6 +4,7 @@ import { getUserId, requireUserId } from './auth';
 
 const theme = v.union(v.literal('dark'), v.literal('light'));
 const lang = v.union(v.literal('en'), v.literal('fr'));
+const country = v.union(v.literal('CA'), v.literal('US'));
 
 // Preferences are one row per user. Returns null until first saved (or when the
 // caller isn't signed in — the app then falls back to localStorage defaults).
@@ -21,7 +22,7 @@ export const get = query({
 });
 
 export const set = mutation({
-  args: { theme, lang, currency: v.optional(v.string()) },
+  args: { theme, lang, currency: v.optional(v.string()), country: v.optional(country) },
   handler: async (ctx, args) => {
     const userId = await requireUserId(ctx);
     const existing = await ctx.db

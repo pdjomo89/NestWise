@@ -12,7 +12,7 @@ import Settings from './components/Settings';
 import SignIn from './components/SignIn';
 import Welcome from './components/Welcome';
 import { useLang } from './prefs';
-import { clearWelcome, isNewSignUp } from './onboarding';
+import { clearPendingPlan, clearWelcome, isNewSignUp } from './onboarding';
 
 type Tab =
   | 'dashboard'
@@ -53,6 +53,7 @@ function AuthedRoot() {
 
   function dismiss() {
     clearWelcome();
+    clearPendingPlan();
     setWelcome(false);
   }
 
@@ -61,6 +62,15 @@ function AuthedRoot() {
   useEffect(() => {
     if (welcome && billing !== undefined && (!billing.configured || billing.pro)) dismiss();
   }, [welcome, billing]);
+
+  // Back from Stripe having gone through with it. `pro` may not be true yet —
+  // the webhook can lag, and in local dev it never arrives — so don't wait for
+  // it: retire the welcome step and let Settings → Billing run `refresh`.
+  // `cancelled` is deliberately absent: that returns to the offer above.
+  useEffect(() => {
+    const outcome = new URLSearchParams(window.location.search).get('checkout');
+    if (welcome && (outcome === 'success' || outcome === 'managed')) dismiss();
+  }, [welcome]);
 
   if (welcome) {
     // Hold the splash rather than flashing the dashboard for the one frame
@@ -155,6 +165,7 @@ function AppContent() {
               plans={retirementPlans}
               netWorth={summary.netWorth}
               suggestedContribution={Math.max(0, Math.round(budget.surplus))}
+              accounts={accounts ?? []}
             />
           ) : (
             <p className="muted">{t('Loading…')}</p>

@@ -6,6 +6,33 @@ import { setLocale, setCurrency } from './format';
 type Theme = 'dark' | 'light';
 type Lang = 'en' | 'fr';
 type Currency = string;
+type Country = 'CA' | 'US';
+
+// Where the user files taxes. Drives which account types the pickers offer and
+// which tax rules the retirement projection uses — not a display setting.
+export const COUNTRIES: { code: Country; label: string }[] = [
+  { code: 'CA', label: 'Canada' },
+  { code: 'US', label: 'United States' },
+];
+
+// First-run guess, so a Canadian isn't shown 401(k)s before they find the
+// setting. Region subtag of the browser locale, then the IANA timezone as a
+// fallback (en-US is the default on plenty of Canadian machines).
+function guessCountry(): Country {
+  try {
+    for (const tag of navigator.languages ?? [navigator.language]) {
+      const region = new Intl.Locale(tag).region;
+      if (region === 'CA') return 'CA';
+      if (region === 'US') return 'US';
+    }
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone ?? '';
+    if (/^America\/(Toronto|Montreal|Vancouver|Edmonton|Winnipeg|Halifax|Regina|St_Johns|Moncton|Whitehorse|Yellowknife|Iqaluit)$/.test(tz))
+      return 'CA';
+  } catch {
+    // Intl.Locale is missing on very old browsers — fall through to the default.
+  }
+  return 'US';
+}
 
 // Display currencies offered in Settings (formatting only — no conversion).
 export const CURRENCIES: { code: string; label: string }[] = [
@@ -290,6 +317,186 @@ const FR: Record<string, string> = {
   'Annual plan': 'Forfait annuel',
   Annual: 'Annuel',
   Subscribe: 'S’abonner',
+  // Country / region
+  Country: 'Pays',
+  Canada: 'Canada',
+  'United States': 'États-Unis',
+  'Sets which account types you can add (RRSP, TFSA, FHSA… in Canada) and the tax rules the retirement projection uses.':
+    'Détermine les types de comptes disponibles (REER, CELI, CELIAPP… au Canada) et les règles fiscales utilisées par la projection de retraite.',
+  // Account type groups
+  Cash: 'Liquidités',
+  'Registered & retirement': 'Comptes enregistrés et retraite',
+  Investments: 'Placements',
+  Property: 'Immobilier',
+  Debt: 'Dettes',
+  // Canadian registered accounts
+  RRSP: 'REER',
+  'Spousal RRSP': 'REER de conjoint',
+  'Group RRSP': 'REER collectif',
+  TFSA: 'CELI',
+  FHSA: 'CELIAPP',
+  RRIF: 'FERR',
+  'LIRA / Locked-in RRSP': 'CRI / REER immobilisé',
+  'LIF / LRIF / PRIF': 'FRV / FRRI',
+  'Pension — defined benefit (RPP)': 'Régime de retraite — prestations déterminées (RPA)',
+  'Pension — defined contribution (RPP)': 'Régime de retraite — cotisations déterminées (RPA)',
+  DPSP: 'RPDB',
+  'PRPP / VRSP': 'RPAC / RVER',
+  RESP: 'REEE',
+  RDSP: 'REEI',
+  'Non-registered investment': 'Placement non enregistré',
+  'Registered Retirement Savings Plan — deductible going in, taxed as income on withdrawal.':
+    'Régime enregistré d’épargne-retraite — déductible à la cotisation, imposé comme revenu au retrait.',
+  'You contribute and deduct; your spouse owns it and is taxed on withdrawal.':
+    'Vous cotisez et déduisez; votre conjoint en est propriétaire et est imposé au retrait.',
+  'Employer-run RRSP, often with a matching contribution.':
+    'REER géré par l’employeur, souvent avec cotisation équivalente.',
+  'Tax-Free Savings Account — no deduction going in, nothing taxed coming out.':
+    'Compte d’épargne libre d’impôt — aucune déduction à la cotisation, aucun impôt au retrait.',
+  'First Home Savings Account — deductible going in and tax-free out for a first home.':
+    'Compte d’épargne libre d’impôt pour l’achat d’une première propriété — déductible à la cotisation et non imposable au retrait.',
+  'What an RRSP becomes by the end of the year you turn 71. A minimum must be withdrawn each year.':
+    'Ce que devient un REER au plus tard à la fin de l’année de vos 71 ans. Un retrait minimal est exigé chaque année.',
+  'Pension money from a former employer. Locked in until a minimum age set by the pension’s jurisdiction.':
+    'Somme de retraite d’un ancien employeur. Immobilisée jusqu’à l’âge minimal fixé par la législation applicable.',
+  'The income stage of a LIRA, with both a yearly minimum and a maximum withdrawal.':
+    'La phase de décaissement d’un CRI, avec un retrait minimal et maximal annuel.',
+  'Employer pension promising a set income. Enter its commuted value if you know it.':
+    'Régime d’employeur garantissant un revenu déterminé. Indiquez sa valeur de rachat si vous la connaissez.',
+  'Employer pension where the balance, not the income, is what’s promised.':
+    'Régime d’employeur où c’est le solde, et non le revenu, qui est déterminé.',
+  'Deferred Profit Sharing Plan — employer-funded, taxed as income on withdrawal.':
+    'Régime de participation différée aux bénéfices — financé par l’employeur, imposé comme revenu au retrait.',
+  'Pooled plan for small employers and the self-employed (VRSP in Quebec).':
+    'Régime collectif pour petits employeurs et travailleurs autonomes (RVER au Québec).',
+  'Registered Education Savings Plan — for a child’s schooling, so it sits outside the retirement projection.':
+    'Régime enregistré d’épargne-études — pour les études d’un enfant, donc exclu de la projection de retraite.',
+  'Registered Disability Savings Plan, with government grants and bonds.':
+    'Régime enregistré d’épargne-invalidité, avec subventions et bons du gouvernement.',
+  'Ordinary investment account. Only the gain is taxed, and only half of a capital gain counts as income.':
+    'Compte de placement ordinaire. Seul le gain est imposé, et seule la moitié d’un gain en capital compte comme revenu.',
+  'Tax-deferred workplace or individual retirement account.':
+    'Compte de retraite individuel ou d’employeur à imposition différée.',
+  // Retirement planner — tax
+  'How it’s taxed': 'Traitement fiscal',
+  'Tax-deferred — RRSP, RRIF, LIRA, pension (%)':
+    'À imposition différée — REER, FERR, CRI, régime de retraite (%)',
+  'Tax-deferred — 401(k), IRA (%)': 'À imposition différée — 401(k), IRA (%)',
+  'Tax-free — TFSA, FHSA (%)': 'Libre d’impôt — CELI, CELIAPP (%)',
+  'Tax-free — Roth (%)': 'Libre d’impôt — Roth (%)',
+  'Marginal tax rate in retirement (%)': 'Taux marginal d’imposition à la retraite (%)',
+  'The remaining': 'Le reste, soit',
+  'is treated as non-registered — only the gain is taxed, and only half of a capital gain counts as income.':
+    'est traité comme non enregistré : seul le gain est imposé, et seule la moitié d’un gain en capital compte comme revenu.',
+  'is treated as a taxable account — only the gain is taxed.':
+    'est traité comme un compte imposable : seul le gain est imposé.',
+  'Tax-deferred and tax-free add up to more than 100%.':
+    'Les parts à imposition différée et libre d’impôt dépassent 100 %.',
+  'Starting split taken from your accounts.': 'Répartition initiale tirée de vos comptes.',
+  'After tax': 'Après impôt',
+  'Combined after tax': 'Total du ménage après impôt',
+  'Tax-deferred (RRSP/RRIF)': 'À imposition différée (REER/FERR)',
+  'Tax-deferred (401k/IRA)': 'À imposition différée (401k/IRA)',
+  'Tax-free (TFSA/FHSA)': 'Libre d’impôt (CELI/CELIAPP)',
+  'Tax-free (Roth)': 'Libre d’impôt (Roth)',
+  Taxable: 'Imposable',
+  // Contribution room
+  'Contribution room': 'Droits de cotisation',
+  'How much you can still put into each registered plan this year. Enter your real room from your CRA Notice of Assessment or CRA My Account — it carries forward from every year you didn’t use in full, so it is usually well above the annual limit.':
+    'Ce que vous pouvez encore verser dans chaque régime enregistré cette année. Inscrivez vos droits réels, tirés de votre avis de cotisation de l’ARC ou de Mon dossier — ils s’accumulent depuis chaque année non utilisée en entier et dépassent donc généralement la limite annuelle.',
+  'Your room': 'Vos droits',
+  'Contributed this year': 'Cotisé cette année',
+  left: 'restants',
+  over: 'en trop',
+  'Room still available across all plans:': 'Droits encore disponibles, tous régimes confondus :',
+  'Starting amounts are': 'Les montants de départ sont ceux de',
+  'figures and are indexed each year — check the current limit before you rely on it.':
+    'et sont indexés chaque année — vérifiez la limite courante avant de vous y fier.',
+  'Over-contributing is penalised monthly until you take the excess out — check this against your CRA account.':
+    'Une cotisation excédentaire est pénalisée chaque mois jusqu’à son retrait — vérifiez auprès de votre dossier de l’ARC.',
+  '18% of last year’s earned income, up to the annual dollar limit':
+    '18 % du revenu gagné de l’an dernier, jusqu’au plafond annuel',
+  'Your real room is on your Notice of Assessment — it includes every year of unused room carried forward, minus any pension adjustment.':
+    'Vos droits réels figurent sur votre avis de cotisation : ils incluent les droits inutilisés reportés, moins tout facteur d’équivalence.',
+  'A flat amount each year since you turned 18': 'Un montant fixe chaque année depuis vos 18 ans',
+  'Unused room carries forward, and anything you withdrew is added back on January 1 of the following year.':
+    'Les droits inutilisés se reportent, et tout retrait est rajouté le 1er janvier de l’année suivante.',
+  'A flat amount each year once the account is open':
+    'Un montant fixe chaque année une fois le compte ouvert',
+  'Carry-forward is capped, so the most you can contribute in one year is limited even after skipping a year.':
+    'Le report est plafonné : le maximum versable en une année reste limité même après une année sautée.',
+  'No annual cap, but the CESG grant matches 20% of the first $2,500 each year':
+    'Aucun plafond annuel, mais la SCEE verse 20 % des premiers 2 500 $ chaque année',
+  'Contributing about $2,500 a year captures the full $500 grant. The grant tops out at $7,200 per child.':
+    'Cotiser environ 2 500 $ par an permet d’obtenir la subvention complète de 500 $. Elle plafonne à 7 200 $ par enfant.',
+  'No annual cap; grants and bonds depend on family income':
+    'Aucun plafond annuel; subventions et bons dépendent du revenu familial',
+  'Contributions attract the Canada Disability Savings Grant, and low-income beneficiaries also receive the bond with no contribution at all.':
+    'Les cotisations donnent droit à la Subvention canadienne pour l’épargne-invalidité, et les bénéficiaires à faible revenu reçoivent aussi le bon sans aucune cotisation.',
+  // Government benefits
+  'Government benefits': 'Prestations gouvernementales',
+  'CPP / QPP': 'RPC / RRQ',
+  OAS: 'SV',
+  'at 65 ($/mo, today’s dollars)': 'à 65 ans ($/mois, en dollars d’aujourd’hui)',
+  'OAS at 65 ($/mo, today’s dollars)': 'SV à 65 ans ($/mois, en dollars d’aujourd’hui)',
+  Start: 'Commencer le',
+  'at age': 'à l’âge de',
+  'Start OAS at age': 'Commencer la SV à l’âge de',
+  'from age': 'dès',
+  'Taking it early permanently reduces it; deferring permanently increases it. Get your own estimate from your My Service Canada account — the amounts here are':
+    'Un début anticipé réduit la prestation de façon permanente; la reporter l’augmente de façon permanente. Obtenez votre estimation dans Mon dossier Service Canada — les montants ici sont des moyennes de',
+  'averages, not your entitlement.': ', pas votre droit réel.',
+  'Your savings carry you alone for': 'Votre épargne vous soutient seule pendant',
+  'years before benefits begin.': 'ans avant le début des prestations.',
+  'At this income, OAS loses about': 'À ce revenu, la SV perd environ',
+  'to the recovery tax. TFSA withdrawals don’t count toward it.':
+    'à l’impôt de récupération. Les retraits du CELI n’y comptent pas.',
+  // RRIF minimum withdrawals
+  'RRIF minimum withdrawals': 'Retraits minimums du FERR',
+  'Convert RRSP to a RRIF at age': 'Convertir le REER en FERR à l’âge de',
+  Age: 'Âge',
+  Factor: 'Facteur',
+  'RRIF balance': 'Solde du FERR',
+  Minimum: 'Minimum',
+  Withdrawn: 'Retiré',
+  'Your plan already withdraws more than the RRIF minimum every year, so the minimum never binds. It begins at age':
+    'Votre plan retire déjà plus que le minimum du FERR chaque année : le minimum ne s’applique jamais. Il commence à',
+  'the minimum withdrawal exceeds what your plan would take — up to':
+    'le retrait minimum dépasse ce que votre plan prélèverait — jusqu’à',
+  'of extra taxable income you cannot defer.':
+    'de revenu imposable supplémentaire que vous ne pouvez pas reporter.',
+  'In that year the forced income costs a further':
+    'Cette année-là, ce revenu forcé coûte',
+  'of OAS. Drawing the RRIF down earlier, or splitting pension income with a spouse, reduces it.':
+    'de SV en plus. Décaisser le FERR plus tôt, ou fractionner le revenu de pension avec un conjoint, réduit cet effet.',
+  'Show less': 'Afficher moins',
+  'Show the full schedule to age': 'Afficher le calendrier complet jusqu’à',
+  'Amounts are in today’s dollars. Converted at':
+    'Montants en dollars d’aujourd’hui. Conversion à',
+  ', so the first mandatory withdrawal is the year you turn':
+    ', donc le premier retrait obligatoire est l’année de vos',
+  'Total with benefits, after tax': 'Total avec prestations, après impôt',
+  'Total after tax (today’s $)': 'Total après impôt (en $ d’aujourd’hui)',
+  'Monthly retirement income, in today’s dollars':
+    'Revenu mensuel à la retraite, en dollars d’aujourd’hui',
+  'From your savings (4% rule)': 'De votre épargne (règle du 4 %)',
+  'Tax and OAS clawback': 'Impôt et récupération de la SV',
+  'Left to spend': 'Reste à dépenser',
+  'Household CPP + OAS': 'RPC + SV du ménage',
+  'Withdrawals lose about': 'Les retraits perdent environ',
+  'to tax overall, leaving': 'en impôt au total, ce qui laisse',
+  'to spend.': 'à dépenser.',
+  // Plan choice on the sign-up form
+  'Choose your plan': 'Choisissez votre forfait',
+  Choose: 'Choisir',
+  Selected: 'Sélectionné',
+  'Start free — decide later': 'Commencer gratuitement — décider plus tard',
+  'Create account & start free trial': 'Créer le compte et démarrer l’essai gratuit',
+  'Create account & subscribe': 'Créer le compte et s’abonner',
+  'Next: Stripe takes your card. Nothing is charged until the trial ends.':
+    'Ensuite : Stripe enregistre votre carte. Aucun débit avant la fin de l’essai.',
+  'Next: secure payment with Stripe.': 'Ensuite : paiement sécurisé avec Stripe.',
+  'Taking you to secure checkout…': 'Redirection vers le paiement sécurisé…',
   'Most banks will work. Banks that open their own login page can’t finish here until this website’s address is added to the Plaid dashboard.':
     'La plupart des banques fonctionneront. Celles qui ouvrent leur propre page de connexion ne pourront pas terminer ici tant que l’adresse de ce site n’aura pas été ajoutée au tableau de bord Plaid.',
   // Greetings (sign-in screen + dashboard)
@@ -372,6 +579,10 @@ const CurrencyContext = createContext<{ currency: Currency; setCurrency: (c: Cur
   currency: 'USD',
   setCurrency: () => {},
 });
+const CountryContext = createContext<{ country: Country; setCountry: (c: Country) => void }>({
+  country: 'US',
+  setCountry: () => {},
+});
 // View-only date filter for the Transactions list. Empty string = unbounded on
 // that end. Lives device-local (localStorage) — it's a display preference, not
 // data, so it doesn't sync to Convex.
@@ -386,6 +597,7 @@ const DateRangeContext = createContext<{
 export const useTheme = () => useContext(ThemeContext);
 export const useLang = () => useContext(LangContext);
 export const useCurrency = () => useContext(CurrencyContext);
+export const useCountry = () => useContext(CountryContext);
 export const useDateRange = () => useContext(DateRangeContext);
 
 export function PrefsProvider({ children }: { children: ReactNode }) {
@@ -399,6 +611,9 @@ export function PrefsProvider({ children }: { children: ReactNode }) {
   const [currency, setCurrencyState] = useState<Currency>(
     () => localStorage.getItem('nw-currency') || 'USD'
   );
+  const [country, setCountryState] = useState<Country>(
+    () => (localStorage.getItem('nw-country') as Country) || guessCountry()
+  );
   const [dateFrom, setDateFrom] = useState(() => localStorage.getItem('nw-txn-from') || '');
   const [dateTo, setDateTo] = useState(() => localStorage.getItem('nw-txn-to') || '');
 
@@ -407,7 +622,7 @@ export function PrefsProvider({ children }: { children: ReactNode }) {
   const { isAuthenticated } = useConvexAuth();
   const serverPrefs = useQuery(api.preferences.get);
   const savePrefs = useMutation(api.preferences.set);
-  const persist = (p: { theme: Theme; lang: Lang; currency: Currency }) => {
+  const persist = (p: { theme: Theme; lang: Lang; currency: Currency; country: Country }) => {
     if (isAuthenticated) void savePrefs(p);
   };
 
@@ -430,6 +645,10 @@ export function PrefsProvider({ children }: { children: ReactNode }) {
   }, [currency]);
 
   useEffect(() => {
+    localStorage.setItem('nw-country', country);
+  }, [country]);
+
+  useEffect(() => {
     localStorage.setItem('nw-txn-from', dateFrom);
     localStorage.setItem('nw-txn-to', dateTo);
   }, [dateFrom, dateTo]);
@@ -440,26 +659,35 @@ export function PrefsProvider({ children }: { children: ReactNode }) {
     if (!isAuthenticated) return; // signed out → localStorage only
     if (serverPrefs === undefined) return; // still loading
     if (serverPrefs === null) {
-      persist({ theme, lang, currency });
+      persist({ theme, lang, currency, country });
     } else {
       setThemeState(serverPrefs.theme);
       setLangState(serverPrefs.lang);
       if (serverPrefs.currency) setCurrencyState(serverPrefs.currency);
+      // Rows written before the country setting existed have none. Keep the
+      // local guess and push it up, rather than silently defaulting them to the
+      // US and showing a Canadian user 401(k)s.
+      if (serverPrefs.country) setCountryState(serverPrefs.country);
+      else persist({ theme: serverPrefs.theme, lang: serverPrefs.lang, currency, country });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [serverPrefs, isAuthenticated]);
 
   const applyTheme = (th: Theme) => {
     setThemeState(th);
-    persist({ theme: th, lang, currency });
+    persist({ theme: th, lang, currency, country });
   };
   const applyLang = (l: Lang) => {
     setLangState(l);
-    persist({ theme, lang: l, currency });
+    persist({ theme, lang: l, currency, country });
   };
   const applyCurrency = (c: Currency) => {
     setCurrencyState(c);
-    persist({ theme, lang, currency: c });
+    persist({ theme, lang, currency: c, country });
+  };
+  const applyCountry = (c: Country) => {
+    setCountryState(c);
+    persist({ theme, lang, currency, country: c });
   };
 
   const t = (s: string) => (lang === 'fr' ? FR[s] ?? s : s);
@@ -481,20 +709,22 @@ export function PrefsProvider({ children }: { children: ReactNode }) {
         }}
       >
         <CurrencyContext.Provider value={{ currency, setCurrency: applyCurrency }}>
-          <DateRangeContext.Provider
-            value={{
-              from: dateFrom,
-              to: dateTo,
-              setFrom: setDateFrom,
-              setTo: setDateTo,
-              clear: () => {
-                setDateFrom('');
-                setDateTo('');
-              },
-            }}
-          >
-            {children}
-          </DateRangeContext.Provider>
+          <CountryContext.Provider value={{ country, setCountry: applyCountry }}>
+            <DateRangeContext.Provider
+              value={{
+                from: dateFrom,
+                to: dateTo,
+                setFrom: setDateFrom,
+                setTo: setDateTo,
+                clear: () => {
+                  setDateFrom('');
+                  setDateTo('');
+                },
+              }}
+            >
+              {children}
+            </DateRangeContext.Provider>
+          </CountryContext.Provider>
         </CurrencyContext.Provider>
       </LangContext.Provider>
     </ThemeContext.Provider>

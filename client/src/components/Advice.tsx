@@ -3,9 +3,9 @@ import { useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { Account, Summary, Budget } from '../types';
 import { usd } from '../format';
-import { isInvestmentType } from '../accountTypes';
+import { isInvestmentType, isRetirementType } from '../accountTypes';
 import { capitalize, colorFor } from '../categories';
-import { useLang } from '../prefs';
+import { useCountry, useLang } from '../prefs';
 
 // Monthly income/expenses are pre-filled from the household budget (Budget tab),
 // current savings from net worth. Tweaking any field re-computes advice live.
@@ -19,6 +19,7 @@ export default function Advice({
   accounts: Account[];
 }) {
   const { t, lang } = useLang();
+  const { country } = useCountry();
   const [monthlyIncome, setMonthlyIncome] = useState(Math.round(budget.monthlyIncome));
   const [monthlyExpenses, setMonthlyExpenses] = useState(Math.round(budget.monthlyExpenses));
   const [currentSavings, setCurrentSavings] = useState(Math.round(summary.netWorth));
@@ -33,8 +34,11 @@ export default function Advice({
   const investmentValue = accounts
     .filter((a) => isInvestmentType(a.type))
     .reduce((s, a) => s + a.balance, 0);
+  // Every account type flagged as retirement savings, not just the US one —
+  // otherwise a Canadian holding an RRSP and a TFSA is told they have no
+  // retirement account at all.
   const retirementValue = accounts
-    .filter((a) => a.type === 'retirement')
+    .filter((a) => isRetirementType(a.type))
     .reduce((s, a) => s + a.balance, 0);
 
   // Biggest expense category (excluding income), with a translated label.
@@ -88,6 +92,7 @@ export default function Advice({
       plans && plans.length > 0 ? projection?.sustainableMonthlyIncome : undefined,
     topCategory,
     lang,
+    country,
   });
 
   return (

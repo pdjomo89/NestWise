@@ -3,7 +3,16 @@ import { useMutation } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { Account, Id } from '../types';
 import { usd, displayCurrency } from '../format';
-import { ACCOUNT_TYPES, ACCOUNT_TYPE_LABEL, isInvestmentType, isLiabilityType } from '../accountTypes';
+import {
+  ACCOUNT_TYPE_LABEL,
+  GROUP_LABEL,
+  GROUP_ORDER,
+  accountType,
+  isInvestmentType,
+  isLiabilityType,
+  typesForRegion,
+} from '../accountTypes';
+import { useCountry } from '../prefs';
 import { capitalize } from '../categories';
 import { useLang } from '../prefs';
 import ConnectBank from './ConnectBank';
@@ -67,6 +76,39 @@ export default function Accounts({ accounts }: { accounts: Account[] }) {
   );
 }
 
+// Account-type picker, scoped to the user's country and grouped so a list that
+// runs to twenty entries in Canada stays scannable. `value` is always kept in
+// the list even if the country wouldn't normally offer it, so editing an
+// account made under a different setting doesn't silently retype it.
+export function AccountTypeSelect({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (type: string) => void;
+}) {
+  const { t } = useLang();
+  const { country } = useCountry();
+  const types = typesForRegion(country, [value]);
+  return (
+    <select value={value} onChange={(e) => onChange(e.target.value)}>
+      {GROUP_ORDER.map((group) => {
+        const inGroup = types.filter((at) => at.group === group);
+        if (!inGroup.length) return null;
+        return (
+          <optgroup key={group} label={t(GROUP_LABEL[group])}>
+            {inGroup.map((at) => (
+              <option key={at.value} value={at.value}>
+                {t(at.label)}
+              </option>
+            ))}
+          </optgroup>
+        );
+      })}
+    </select>
+  );
+}
+
 function AddAccount() {
   const { t } = useLang();
   const addAccount = useMutation(api.accounts.add);
@@ -99,13 +141,7 @@ function AddAccount() {
       <h2>{t('Add account')}</h2>
       <form className="row-form" onSubmit={submit}>
         <input placeholder={t('Name (e.g. Fidelity)')} value={name} onChange={(e) => setName(e.target.value)} required />
-        <select value={type} onChange={(e) => setType(e.target.value)}>
-          {ACCOUNT_TYPES.map((at) => (
-            <option key={at.value} value={at.value}>
-              {t(at.label)}
-            </option>
-          ))}
-        </select>
+        <AccountTypeSelect value={type} onChange={setType} />
         <input
           type="number"
           step="0.01"
@@ -124,6 +160,9 @@ function AddAccount() {
         />
         <button type="submit">{t('Add')}</button>
       </form>
+      {accountType(type)?.note && (
+        <p className="muted small type-note">{t(accountType(type)!.note!)}</p>
+      )}
     </section>
   );
 }
@@ -171,13 +210,7 @@ function AccountRow({ account }: { account: Account }) {
     return (
       <li className="src-edit">
         <input value={name} onChange={(e) => setName(e.target.value)} />
-        <select value={type} onChange={(e) => setType(e.target.value)}>
-          {ACCOUNT_TYPES.map((at) => (
-            <option key={at.value} value={at.value}>
-              {t(at.label)}
-            </option>
-          ))}
-        </select>
+        <AccountTypeSelect value={type} onChange={setType} />
         <input
           type="number"
           step="0.01"

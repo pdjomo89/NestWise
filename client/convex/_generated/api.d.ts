@@ -12,6 +12,7 @@ import type * as accounts from "../accounts.js";
 import type * as auth from "../auth.js";
 import type * as budget from "../budget.js";
 import type * as coach from "../coach.js";
+import type * as contributionRoom from "../contributionRoom.js";
 import type * as frequency from "../frequency.js";
 import type * as http from "../http.js";
 import type * as income from "../income.js";
@@ -39,6 +40,7 @@ declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   budget: typeof budget;
   coach: typeof coach;
+  contributionRoom: typeof contributionRoom;
   frequency: typeof frequency;
   http: typeof http;
   income: typeof income;
