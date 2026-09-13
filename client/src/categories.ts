@@ -16,11 +16,33 @@ export const CATEGORY_COLORS: Record<string, string> = {
 // Dark-surface steps for the four hues that sit too light against the dark
 // panel (OKLCH L above the 0.48–0.67 band, which washes them out). Same hue, one
 // step darker; every other category reads correctly in both themes.
+//
+// `general` is here for the opposite reason. As a fill it has to clear `shopping`
+// (#8b5cf6): at the #a855f7 above the two are ΔE 5.1 apart to normal vision and
+// 0.3 under protanopia — indistinguishable. Both chart steps below are re-stepped
+// off that collision. The value stays #a855f7 in CATEGORY_COLORS because that map
+// also colours *text* (category pills, the savings-plan labels), and the darker
+// fills drop to 2.3:1 against the dark panel — fine under a swatch, unreadable as
+// a word. So the fill is re-stepped per theme and the ink is left alone.
+// `housing` is re-stepped for the same kind of reason: against `shopping`
+// (#8b5cf6) the indigo #6366f1 is ΔE 6.3 to normal vision and 0.8 under
+// protanopia. Blue-700 opens that to 15.9, clearing the normal-vision gate in
+// both themes. The pair still sits at ~7.5 under protanopia — inside the 6–8
+// floor band, which the gaps between slices and the always-present legend are
+// what make legal.
 const CATEGORY_COLORS_DARK: Record<string, string> = {
   food: '#16a34a',
   transport: '#d97706',
   savings: '#0891b2',
   health: '#0d9488',
+  general: '#a21caf',
+  housing: '#1d4ed8',
+};
+
+// Light-surface fills, for the two categories re-stepped above.
+const CATEGORY_COLORS_LIGHT: Record<string, string> = {
+  general: '#86198f',
+  housing: '#1d4ed8',
 };
 
 // The order categories are drawn in wherever they sit side by side (the grouped
@@ -53,12 +75,12 @@ function hash(s: string) {
 export const colorFor = (category: string) =>
   CATEGORY_COLORS[category.toLowerCase()] ?? PALETTE[hash(category) % PALETTE.length];
 
-// Theme-aware variant. Charts drawn on a panel should use this so the four
-// too-light hues drop to their dark step; everything else is unchanged.
+// Theme-aware variant. Charts drawn on a panel should use this so the hues that
+// misread as fills drop to their per-theme step; everything else is unchanged.
 export const chartColorFor = (category: string, theme: 'dark' | 'light') => {
   const key = category.toLowerCase();
-  if (theme === 'dark' && CATEGORY_COLORS_DARK[key]) return CATEGORY_COLORS_DARK[key];
-  return colorFor(key);
+  const step = theme === 'dark' ? CATEGORY_COLORS_DARK[key] : CATEGORY_COLORS_LIGHT[key];
+  return step ?? colorFor(key);
 };
 
 // Category values are stored as lowercase English keys. Display them via the
