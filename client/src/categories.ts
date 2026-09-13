@@ -24,17 +24,25 @@ export const CATEGORY_COLORS: Record<string, string> = {
 // also colours *text* (category pills, the savings-plan labels), and the darker
 // fills drop to 2.3:1 against the dark panel — fine under a swatch, unreadable as
 // a word. So the fill is re-stepped per theme and the ink is left alone.
+// `housing` is re-stepped for the same kind of reason: against `shopping`
+// (#8b5cf6) the indigo #6366f1 is ΔE 6.3 to normal vision and 0.8 under
+// protanopia. Blue-700 opens that to 15.9, clearing the normal-vision gate in
+// both themes. The pair still sits at ~7.5 under protanopia — inside the 6–8
+// floor band, which the gaps between slices and the always-present legend are
+// what make legal.
 const CATEGORY_COLORS_DARK: Record<string, string> = {
   food: '#16a34a',
   transport: '#d97706',
   savings: '#0891b2',
   health: '#0d9488',
   general: '#a21caf',
+  housing: '#1d4ed8',
 };
 
-// Light-surface fills. Only `general` needs one, for the reason above.
+// Light-surface fills, for the two categories re-stepped above.
 const CATEGORY_COLORS_LIGHT: Record<string, string> = {
   general: '#86198f',
+  housing: '#1d4ed8',
 };
 
 // The order categories are drawn in wherever they sit side by side (the grouped
