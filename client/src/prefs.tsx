@@ -97,6 +97,7 @@ const FR: Record<string, string> = {
   'Recurring expenses plus this month’s one-off transactions.':
     'Dépenses récurrentes plus les transactions ponctuelles de ce mois-ci.',
   'No expenses recorded.': 'Aucune dépense enregistrée.',
+  'Total spending': 'Dépenses totales',
   'Retirement outlook': 'Perspective de retraite',
   'Set up your plan in the Retirement tab to see your projected nest egg here.':
     'Configurez votre plan dans l’onglet Retraite pour voir votre épargne projetée ici.',

@@ -1,11 +1,11 @@
+import { useState } from 'react';
 import { useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { Account, Summary, Budget, RetirementPlan } from '../types';
-import { usd, usdCompact } from '../format';
-import { niceTicks } from '../chart';
-import { colorFor, capitalize } from '../categories';
+import { usd } from '../format';
+import { chartColorFor, capitalize, CHART_CATEGORY_ORDER } from '../categories';
 import { ACCOUNT_TYPE_LABEL } from '../accountTypes';
-import { useLang } from '../prefs';
+import { useLang, useTheme } from '../prefs';
 import { timeGreeting, displayName } from '../greeting';
 import SpendingTrends from './SpendingTrends';
 
@@ -60,8 +60,6 @@ export default function Dashboard({
   if (!summary) return <p className="muted">{t('Loading…')}</p>;
 
   const categories = budget?.byCategory ?? [];
-  const rawMax = Math.max(0, ...categories.map((c) => c.total));
-  const { axisMax, ticks } = niceTicks(rawMax);
 
   return (
     <div className="grid">
@@ -137,45 +135,7 @@ export default function Dashboard({
         {categories.length === 0 ? (
           <p className="muted">{t('No expenses recorded.')}</p>
         ) : (
-          <div className="bar-chart">
-            <div className="bar-chart-plot">
-              {ticks.map((tv) => (
-                <div className="gridline" key={tv} style={{ bottom: `${(tv / axisMax) * 100}%` }}>
-                  <span className="ytick-label">{usdCompact(tv)}</span>
-                </div>
-              ))}
-              <div className="bar-row">
-                {categories.map((c) => (
-                  <div
-                    className="bar-col"
-                    key={c.category}
-                    title={`${t(capitalize(c.category))}: ${usd(c.total)}`}
-                  >
-                    <div
-                      className="bar-fill"
-                      style={{
-                        height: `${(c.total / axisMax) * 100}%`,
-                        background: colorFor(c.category),
-                      }}
-                    >
-                      <span className="bar-amount">{usd(c.total)}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div className="bar-xaxis">
-              {categories.map((c) => (
-                <span
-                  className="xtick-label cat"
-                  key={c.category}
-                  style={{ color: colorFor(c.category) }}
-                >
-                  {t(capitalize(c.category))}
-                </span>
-              ))}
-            </div>
-          </div>
+          <CategoryPie categories={categories} />
         )}
       </section>
 
@@ -183,6 +143,112 @@ export default function Dashboard({
     </div>
   );
 }
+
+// Spending by category is a part-to-whole reading, so it's drawn as a donut: the
+// ring carries each category's share, the hole carries the total. Slices follow
+// CHART_CATEGORY_ORDER rather than descending value — the same reason the grouped
+// bars do. Sorting by amount would let two near-identical hues land side by side
+// as the month's numbers move; the fixed ring keeps every neighbouring pair (and
+// the last→first wrap) clear of each other in both themes.
+function CategoryPie({ categories }: { categories: { category: string; total: number }[] }) {
+  const { t } = useLang();
+  const { theme } = useTheme();
+  const [active, setActive] = useState<string | null>(null);
+
+  const slices = [...categories].sort(
+    (a, b) => ringIndex(a.category) - ringIndex(b.category)
+  );
+  const sum = slices.reduce((acc, c) => acc + c.total, 0);
+  if (sum <= 0) return <p className="muted">{t('No expenses recorded.')}</p>;
+
+  const R = 76;
+  const CIRC = 2 * Math.PI * R;
+  // A 3-unit gap of bare surface between neighbouring arcs so two slices never
+  // touch. A lone category is a full ring — a gap there reads as a stray notch.
+  const gap = slices.length > 1 ? 3 : 0;
+
+  let offset = 0;
+  const arcs = slices.map((c) => {
+    const share = c.total / sum;
+    const len = share * CIRC;
+    const arc = { ...c, share, len: Math.max(len - gap, 1), offset };
+    offset += len;
+    return arc;
+  });
+
+  const shown = active ? arcs.find((a) => a.category === active) : undefined;
+
+  return (
+    <div className="pie-chart">
+      <div className="pie-plot">
+        <svg viewBox="0 0 200 200" className="pie-svg" role="img" aria-label={
+          `${t('Monthly spending by category')}: ` +
+          arcs
+            .map((a) => `${t(capitalize(a.category))} ${usd(a.total)}`)
+            .join(', ')
+        }>
+          <g transform="rotate(-90 100 100)">
+            {arcs.map((a) => (
+              <circle
+                key={a.category}
+                className={`pie-slice${active && active !== a.category ? ' dim' : ''}`}
+                cx="100"
+                cy="100"
+                r={R}
+                fill="none"
+                stroke={chartColorFor(a.category, theme)}
+                strokeWidth={active === a.category ? 32 : 26}
+                strokeDasharray={`${a.len} ${CIRC - a.len}`}
+                strokeDashoffset={-a.offset}
+                onMouseEnter={() => setActive(a.category)}
+                onMouseLeave={() => setActive(null)}
+              >
+                <title>{`${t(capitalize(a.category))}: ${usd(a.total)} · ${pct(a.share)}`}</title>
+              </circle>
+            ))}
+          </g>
+        </svg>
+        {/* The hole is the readout: the total at rest, the hovered slice on hover,
+            so a share never has to be judged from the angle alone. */}
+        <div className="pie-center">
+          <span className="pie-center-value">{usd(shown ? shown.total : sum)}</span>
+          <span className="pie-center-label">
+            {shown ? `${t(capitalize(shown.category))} · ${pct(shown.share)}` : t('Total spending')}
+          </span>
+        </div>
+      </div>
+
+      {/* Legend doubles as the table view: identity is never colour alone, and it
+          carries the amounts the bar labels used to show. */}
+      <ul className="grouped-legend pie-legend">
+        {arcs.map((a) => (
+          <li
+            key={a.category}
+            className={active === a.category ? 'active' : ''}
+            onMouseEnter={() => setActive(a.category)}
+            onMouseLeave={() => setActive(null)}
+          >
+            <span
+              className="legend-swatch"
+              style={{ background: chartColorFor(a.category, theme) }}
+            />
+            <span className="legend-name">{t(capitalize(a.category))}</span>
+            <span className="legend-latest">{usd(a.total)}</span>
+            <span className="legend-share muted">{pct(a.share)}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+const pct = (share: number) => `${(share * 100).toFixed(share < 0.1 ? 1 : 0)}%`;
+
+// Unmapped categories keep their relative order after the known ones.
+const ringIndex = (category: string) => {
+  const i = CHART_CATEGORY_ORDER.indexOf(category.toLowerCase());
+  return i === -1 ? CHART_CATEGORY_ORDER.length : i;
+};
 
 function SurplusPanel({ budget }: { budget: Budget }) {
   const { t } = useLang();
